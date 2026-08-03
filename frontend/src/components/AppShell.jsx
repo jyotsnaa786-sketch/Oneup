@@ -15,14 +15,16 @@ export default function AppShell({ children }) {
   };
 
   const isAdmin = user?.role === "admin";
+  const isDirector = user?.role === "director";
+  const canViewAdminPortal = isAdmin || isDirector;
 
   const navItems = [
     { to: "/", label: "Dashboard", short: "Home", icon: Gauge, testid: "nav-dashboard", allow: true },
     { to: "/audits", label: "Audits Archive", short: "Archive", icon: ClipboardText, testid: "nav-audits", allow: true },
-    { to: "/tasks", label: "Action Tracker", short: "Tasks", icon: WarningCircle, testid: "nav-tasks", allow: true },
-    { to: "/admin", label: "Admin Portal", short: "Admin", icon: Shield, testid: "nav-admin", allow: isAdmin },
+    { to: "/tasks", label: "Action Tracker", short: "Tasks", icon: WarningCircle, testid: "nav-tasks", allow: !isDirector },
+    { to: "/admin", label: "Admin Portal", short: "Admin", icon: Shield, testid: "nav-admin", allow: canViewAdminPortal },
     { to: "/template", label: "Template Editor", short: "Template", icon: Sliders, testid: "nav-template", allow: isAdmin },
-    { to: "/audits/new", label: "Run New Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: true, isAction: true },
+    { to: "/audits/new", label: "Run New Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: !isDirector, isAction: true },
   ].filter(item => item.allow);
 
   // Clean 5-tab mobile navigation without overlapping protrusions
@@ -31,7 +33,7 @@ export default function AppShell({ children }) {
     { to: "/audits", label: "Archive", icon: ClipboardText },
     { to: "/audits/new", label: "Run Audit", icon: PlusCircle, highlight: true },
     { to: "/tasks", label: "Tasks", icon: WarningCircle },
-    { to: isAdmin ? "/admin" : "/login", label: isAdmin ? "Admin" : "Profile", icon: isAdmin ? Shield : SignOut, isLogout: !isAdmin },
+    { to: canViewAdminPortal ? "/admin" : "/login", label: canViewAdminPortal ? "Admin" : "Profile", icon: canViewAdminPortal ? Shield : SignOut, isLogout: !canViewAdminPortal },
   ];
 
   return (
@@ -94,6 +96,7 @@ export default function AppShell({ children }) {
               <div className="text-xs font-semibold leading-none flex items-center gap-1 justify-end">
                 {user?.name || "Auditor"}
                 {isAdmin && <span className="bg-emerald-600 text-white font-mono text-[8px] px-1 py-0.5 uppercase">ADMIN</span>}
+                {isDirector && <span className="bg-purple-700 text-white font-mono text-[8px] px-1 py-0.5 uppercase">DIRECTOR [VIEW-ONLY]</span>}
               </div>
               <div className="font-mono text-[9px] tracking-wider uppercase text-muted-foreground mt-0.5">
                 Role: {user?.role || "auditor"}

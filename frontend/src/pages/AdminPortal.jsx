@@ -15,7 +15,10 @@ export default function AdminPortal() {
     api.get("/audits").then((r) => setAudits(r.data)).catch(() => toast.error("Failed to load records"));
   }, []);
 
-  if (user?.role !== "admin") {
+  const isAdmin = user?.role === "admin";
+  const isDirector = user?.role === "director";
+
+  if (!isAdmin && !isDirector) {
     return (
       <AppShell>
         <div className="border-2 border-destructive bg-destructive/5 p-8 sm:p-12 text-center max-w-2xl mx-auto my-6 sm:my-12 animate-fade-up">
@@ -58,9 +61,16 @@ export default function AdminPortal() {
             Exclusive administrative rights to inspect dealership records and generate official PDF &amp; Excel compliance spreadsheets.
           </p>
         </div>
-        <Link to="/template" className="h-11 px-5 bg-foreground text-white hover:bg-primary font-bold text-xs tracking-[0.15em] uppercase inline-flex items-center justify-center gap-2 transition-colors">
-          <Sliders weight="bold" size={16} /> Manage 133-Question Template
-        </Link>
+        {isAdmin && (
+          <Link to="/template" className="h-11 px-5 bg-foreground text-white hover:bg-primary font-bold text-xs tracking-[0.15em] uppercase inline-flex items-center justify-center gap-2 transition-colors">
+            <Sliders weight="bold" size={16} /> Manage 133-Question Template
+          </Link>
+        )}
+        {isDirector && (
+          <div className="h-11 px-4 bg-muted/80 border border-border text-muted-foreground font-mono text-xs inline-flex items-center gap-2">
+            🔒 View-Only Director Access: Checklist modifications locked
+          </div>
+        )}
       </div>
 
       <div className="border border-border bg-white shadow-xs animate-fade-up">

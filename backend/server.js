@@ -108,6 +108,22 @@ if (!db.users.find(u => u.email === ADMIN_EMAIL)) {
   saveDB();
 }
 
+// Seed Director View-Only Account
+const DIRECTOR_EMAIL = 'directors@oneupmaruti.com';
+const DIRECTOR_PASS = 'director123';
+if (!db.users.find(u => u.email === DIRECTOR_EMAIL)) {
+  const hash = bcrypt.hashSync(DIRECTOR_PASS, 10);
+  db.users.push({
+    id: '7b7d9db4d9668f69d34e4b38',
+    email: DIRECTOR_EMAIL,
+    name: 'OneUP Board of Directors',
+    role: 'director',
+    password_hash: hash,
+    created_at: new Date().toISOString()
+  });
+  saveDB();
+}
+
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
@@ -180,6 +196,20 @@ function authMiddleware(req, res, next) {
 function adminOnly(req, res, next) {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ detail: "Access Denied: Restricted to OneUP Motors Administrators only." });
+  }
+  next();
+}
+
+function adminOrDirector(req, res, next) {
+  if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'director')) {
+    return res.status(403).json({ detail: "Access Denied: Restricted to OneUP Administrators and Directors." });
+  }
+  next();
+}
+
+function preventDirectorEdits(req, res, next) {
+  if (req.user && req.user.role === 'director') {
+    return res.status(403).json({ detail: "Access Denied: Board of Directors accounts operate in strict view-only executive governance mode." });
   }
   next();
 }
@@ -284,7 +314,7 @@ app.put('/api/audit-template', authMiddleware, adminOnly, (req, res) => {
 });
 
 // --- Core Audit Routes ---
-app.post('/api/audits', authMiddleware, (req, res) => {
+app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
   const { dealership_name, location, auditor_name, audit_date, categories, general_notes } = req.body;
   const { overall, catScores } = computeScores(categories || []);
   const auditId = crypto.randomUUID();
@@ -354,7 +384,7 @@ app.get('/api/tasks', authMiddleware, (req, res) => {
   res.json(db.tasks || []);
 });
 
-app.patch('/api/tasks/:id', authMiddleware, (req, res) => {
+app.patch('/api/tasks/:id', authMiddleware, preventDirectorEdits, (req, res) => {
   const task = (db.tasks || []).find(t => t.id === req.params.id);
   if (!task) return res.status(404).json({ detail: "Task not found" });
   const { owner, due_date, status } = req.body;
@@ -366,7 +396,7 @@ app.patch('/api/tasks/:id', authMiddleware, (req, res) => {
 });
 
 // --- ADMIN ONLY EXPORT ENGINES (PDF & EXCEL) ---
-app.get('/api/audits/:id/pdf', authMiddleware, adminOnly, (req, res) => {
+app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
   const audit = (db.audits || []).find(a => a.id === req.params.id);
   if (!audit) return res.status(404).json({ detail: "Audit not found" });
 
@@ -491,7 +521,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOnly, (req, res) => {
   doc.end();
 });
 
-app.get('/api/audits/:id/excel', authMiddleware, adminOnly, (req, res) => {
+app.get('/api/audits/:id/excel', authMiddleware, adminOrDirector, (req, res) => {
   const audit = (db.audits || []).find(a => a.id === req.params.id);
   if (!audit) return res.status(404).json({ detail: "Audit not found" });
 

@@ -77,7 +77,7 @@ export default function AuditDetail() {
   if (!audit) return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
 
   const scoreOf = (cid) => (audit.category_scores || []).find((c) => c.category_id === cid);
-  const isAdmin = user?.role === "admin";
+  const canExport = user?.role === "admin" || user?.role === "director";
 
   const downloadPdf = () => {
     window.open(`${getHostBase()}/api/audits/${id}/pdf?auth=${encodeURIComponent(document.cookie)}`, "_blank");
@@ -96,7 +96,7 @@ export default function AuditDetail() {
           <ArrowLeft size={14} /> Back to Archive
         </Link>
 
-        {isAdmin ? (
+        {canExport ? (
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={downloadPdf}
