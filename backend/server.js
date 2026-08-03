@@ -224,7 +224,7 @@ app.get('/api/download/windows-app', (req, res) => {
 echo ==========================================================
 echo INSTALLING ONEUP MOTORS AFTER-SALES AUDIT APP TO DESKTOP
 echo ==========================================================
-powershell -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('$HOME\\Desktop\\OneUP Motors Audit App.lnk'); $Shortcut.TargetPath = 'msedge.exe'; $Shortcut.Arguments = '--app=http://192.168.1.152:8001'; $Shortcut.Description = 'OneUP Motors After-Sales Audit System'; $Shortcut.Save()"
+powershell -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('$HOME\\Desktop\\OneUP Motors Audit App.lnk'); $Shortcut.TargetPath = 'msedge.exe'; $Shortcut.Arguments = '--app=https://oneup-motors-audit.onrender.com'; $Shortcut.Description = 'OneUP Motors After-Sales Audit System'; $Shortcut.Save()"
 if %ERRORLEVEL% EQU 0 (
   echo.
   echo [SUCCESS] OneUP Motors App shortcut installed onto your PC Desktop!

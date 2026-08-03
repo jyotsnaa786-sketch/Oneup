@@ -10,9 +10,9 @@ export default function InstallPrompt() {
   const [copied, setCopied] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
-  // The definitive local Wi-Fi mobile address
-  const mobileLink = "http://192.168.1.152:8001";
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(mobileLink)}&color=0047AB&bgcolor=FFFFFF`;
+  // The definitive live cloud application link
+  const mobileLink = typeof window !== "undefined" && window.location.hostname !== "localhost" ? window.location.origin : "https://oneup-motors-audit.onrender.com";
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent("https://oneup-motors-audit.onrender.com")}&color=0047AB&bgcolor=FFFFFF`;
 
   useEffect(() => {
     const inStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -184,7 +184,7 @@ export default function InstallPrompt() {
                   <DeviceMobile weight="fill" size={16} /> Android Smartphone (Chrome / Samsung)
                 </div>
                 <p className="text-xs text-foreground mb-1">
-                  1. Open <strong>http://192.168.1.152:8001</strong> on your Android phone over Wi-Fi.
+                  1. Open <strong>https://oneup-motors-audit.onrender.com</strong> on your Android phone.
                 </p>
                 <p className="text-xs text-foreground">
                   2. Tap the 3-dots menu <strong>(⋮)</strong> in the top right and tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.
@@ -196,7 +196,7 @@ export default function InstallPrompt() {
                   <DeviceMobile weight="fill" size={16} /> iPhone / iPad (iOS Safari)
                 </div>
                 <p className="text-xs text-foreground mb-1">
-                  1. Open <strong>http://192.168.1.152:8001</strong> inside Safari on your iPhone.
+                  1. Open <strong>https://oneup-motors-audit.onrender.com</strong> inside Safari on your iPhone.
                 </p>
                 <p className="text-xs text-foreground">
                   2. Tap Safari's bottom Share icon <strong>(⬆️)</strong> and select <strong>"Add to Home Screen"</strong>.
