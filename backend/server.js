@@ -424,11 +424,11 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
   else if (audit.status === 'Needs Attention') statusColor = '#EA580C';
   else statusColor = '#DC2626';
 
-  doc.rect(40, 180, 515, 48).fill('#F3F4F6');
-  doc.fillColor('#0A0A0A').font('Helvetica-Bold').fontSize(13.5).text(`OVERALL COMPLIANCE SCORE: ${audit.overall_score}%`, 55, 197, { width: 280 });
-  doc.fillColor(statusColor).font('Helvetica-Bold').fontSize(13.5).text(`STATUS: ${audit.status.toUpperCase()}`, 340, 197, { width: 200, align: 'right' });
+  doc.rect(40, 180, 515, 56).fill('#F3F4F6');
+  doc.fillColor('#0A0A0A').font('Helvetica-Bold').fontSize(13).text(`OVERALL COMPLIANCE SCORE:  ${audit.overall_score}%`, 55, 193, { width: 480 });
+  doc.fillColor(statusColor).font('Helvetica-Bold').fontSize(13).text(`AUDIT COMPLIANCE STATUS:    ${audit.status.toUpperCase()}`, 55, 214, { width: 480 });
 
-  let y = 245;
+  let y = 255;
   doc.fillColor('#0047AB').font('Helvetica-Bold').fontSize(12).text('CATEGORY PERFORMANCE BREAKDOWN (20 PILLARS)', 40, y);
   y += 20;
 
