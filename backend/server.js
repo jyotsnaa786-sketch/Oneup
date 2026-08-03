@@ -92,10 +92,11 @@ function ensureTemplateLoaded() {
 }
 ensureTemplateLoaded();
 
-// Seed Admin Account
+// Seed & Synchronize Admin Account
 const ADMIN_EMAIL = 'jyotsnaa786@gmail.com';
-const ADMIN_PASS = 'admin123';
-if (!db.users.find(u => u.email === ADMIN_EMAIL)) {
+const ADMIN_PASS = 'girdhar123';
+let existingAdmin = db.users.find(u => u.email === ADMIN_EMAIL);
+if (!existingAdmin) {
   const hash = bcrypt.hashSync(ADMIN_PASS, 10);
   db.users.push({
     id: '6a6c8ca3c8557f58c23d3a27',
@@ -105,6 +106,9 @@ if (!db.users.find(u => u.email === ADMIN_EMAIL)) {
     password_hash: hash,
     created_at: new Date().toISOString()
   });
+  saveDB();
+} else {
+  existingAdmin.password_hash = bcrypt.hashSync(ADMIN_PASS, 10);
   saveDB();
 }
 
