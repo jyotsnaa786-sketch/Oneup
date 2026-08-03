@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: oneup-motors-audit
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: audit-data-storage
+      mountPath: /opt/render/project/src/backend/data
+      sizeGB: 1

@@ -1,0 +1,20 @@
+{
+  "short_name": "OneUP Audit",
+  "name": "OneUP Motors | After-Sales Audit Protocol",
+  "description": "Mobile field inspection & compliance scoring application for OneUP Motors dealerships.",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0047AB",
+  "theme_color": "#0047AB",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["business", "productivity", "utilities"]
+}

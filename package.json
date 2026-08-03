@@ -1,0 +1,13 @@
+{
+  "name": "oneup-motors-audit-system",
+  "version": "1.0.0",
+  "description": "OneUP Motors After-Sales Compliance & Inspection PWA Suite",
+  "scripts": {
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && node server.js"
+  },
+  "author": "OneUP Motors Audit System",
+  "license": "ISC",
+  "private": true
+}
