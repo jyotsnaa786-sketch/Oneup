@@ -8,7 +8,3 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-    disk:
-      name: audit-data-storage
-      mountPath: /opt/render/project/src/backend/data
-      sizeGB: 1
