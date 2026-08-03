@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { formatApiErrorDetail } from "@/lib/apiClient";
 import { toast } from "sonner";
-import { Wrench, ArrowRight } from "@phosphor-icons/react";
+import { Wrench, ArrowRight, Eye, EyeSlash } from "@phosphor-icons/react";
 
 const HERO =
   "https://images.unsplash.com/photo-1615906655593-ad0386982a0f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwxfHxjYXIlMjBlbmdpbmUlMjBpbnNwZWN0aW9uJTIwbWVjaGFuaWN8ZW58MHx8fHwxNzgyMjM4MDAxfDA&ixlib=rb-4.1.0&q=85";
@@ -15,6 +15,7 @@ export default function Login() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -86,15 +87,35 @@ export default function Login() {
               />
             </div>
             <div>
-              <label className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Password</label>
-              <input
-                data-testid="password-input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1 w-full h-11 px-3 border border-input bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 font-mono"
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[11px] font-mono font-bold text-primary hover:underline focus:outline-none cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? "HIDE 👁️" : "SHOW 👁️"}
+                </button>
+              </div>
+              <div className="relative mt-1">
+                <input
+                  data-testid="password-input"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full h-11 pl-3 pr-11 border border-input bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-foreground hover:text-primary transition-colors focus:outline-none cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeSlash size={20} weight="bold" /> : <Eye size={20} weight="bold" />}
+                </button>
+              </div>
             </div>
 
             {error && (
