@@ -13,8 +13,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("jyotsnaa786@gmail.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -102,12 +102,6 @@ export default function Login() {
                 {error}
               </div>
             )}
-
-            <div className="p-3 bg-muted border border-border text-xs text-muted-foreground font-mono">
-              <strong>Seeded OneUP Admin Account:</strong><br />
-              Email: jyotsnaa786@gmail.com<br />
-              Password: admin123
-            </div>
 
             <button
               type="submit"
