@@ -391,9 +391,20 @@ app.get('/api/tasks', authMiddleware, (req, res) => {
 app.patch('/api/tasks/:id', authMiddleware, preventDirectorEdits, (req, res) => {
   const task = (db.tasks || []).find(t => t.id === req.params.id);
   if (!task) return res.status(404).json({ detail: "Task not found" });
-  const { owner, due_date, status } = req.body;
+  const { owner, due_date, status, action_remark, follow_up_date } = req.body;
+
+  // Enforce mandatory Action Taken Remarks when attempting to close a task
+  if (status === 'closed') {
+    const effectiveRemark = (action_remark !== undefined ? action_remark : (task.action_remark || "")).trim();
+    if (effectiveRemark.length < 3) {
+      return res.status(400).json({ detail: "Mandatory Governance Rule: Action Taken Remarks must be recorded before a defect task can be marked as closed!" });
+    }
+  }
+
   if (owner !== undefined) task.owner = owner;
   if (due_date !== undefined) task.due_date = due_date;
+  if (action_remark !== undefined) task.action_remark = action_remark.trim();
+  if (follow_up_date !== undefined) task.follow_up_date = follow_up_date;
   if (status !== undefined) task.status = status;
   saveDB();
   res.json(task);
