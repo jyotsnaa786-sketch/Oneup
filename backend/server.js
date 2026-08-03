@@ -425,8 +425,8 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
   else statusColor = '#DC2626';
 
   doc.rect(40, 180, 515, 48).fill('#F3F4F6');
-  doc.fillColor('#0A0A0A').font('Helvetica-Bold').fontSize(18).text(`OVERALL COMPLIANCE SCORE: ${audit.overall_score}%`, 55, 195);
-  doc.fillColor(statusColor).fontSize(14).text(`STATUS: ${audit.status.toUpperCase()}`, 350, 197);
+  doc.fillColor('#0A0A0A').font('Helvetica-Bold').fontSize(13.5).text(`OVERALL COMPLIANCE SCORE: ${audit.overall_score}%`, 55, 197, { width: 280 });
+  doc.fillColor(statusColor).font('Helvetica-Bold').fontSize(13.5).text(`STATUS: ${audit.status.toUpperCase()}`, 340, 197, { width: 200, align: 'right' });
 
   let y = 245;
   doc.fillColor('#0047AB').font('Helvetica-Bold').fontSize(12).text('CATEGORY PERFORMANCE BREAKDOWN (20 PILLARS)', 40, y);
