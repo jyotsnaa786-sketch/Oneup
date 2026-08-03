@@ -2,10 +2,13 @@ import axios from "axios";
 
 export const getHostBase = () => {
   if (typeof window === "undefined") return "http://localhost:8001";
-  if (window.location.port === "8001") {
-    return `${window.location.protocol}//${window.location.host}`;
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    if (window.location.port === "8001") {
+      return `${window.location.protocol}//${window.location.host}`;
+    }
+    return `http://${window.location.hostname}:8001`;
   }
-  return `http://${window.location.hostname}:8001`;
+  return `${window.location.protocol}//${window.location.host}`;
 };
 
 export const API = `${getHostBase()}/api`;
