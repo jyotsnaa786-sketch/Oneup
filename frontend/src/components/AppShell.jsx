@@ -21,7 +21,7 @@ export default function AppShell({ children }) {
   const navItems = [
     { to: "/", label: "Dashboard", short: "Home", icon: Gauge, testid: "nav-dashboard", allow: true },
     { to: "/audits", label: "Audits Archive", short: "Archive", icon: ClipboardText, testid: "nav-audits", allow: true },
-    { to: "/tasks", label: "Action Tracker", short: "Tasks", icon: WarningCircle, testid: "nav-tasks", allow: !isDirector },
+    { to: "/tasks", label: "Action Tracker", short: "Tasks", icon: WarningCircle, testid: "nav-tasks", allow: true },
     { to: "/admin", label: "Admin Portal", short: "Admin", icon: Shield, testid: "nav-admin", allow: canViewAdminPortal },
     { to: "/template", label: "Template Editor", short: "Template", icon: Sliders, testid: "nav-template", allow: isAdmin },
     { to: "/audits/new", label: "Run New Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: !isDirector, isAction: true },

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/apiClient";
+import { useAuth } from "@/context/AuthContext";
 import AppShell from "@/components/AppShell";
 import { toast } from "sonner";
 import { CheckCircle, Clock, User, CalendarBlank, Tag, MagnifyingGlass, Funnel } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 
 export default function TaskList() {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState(null);
   const [filter, setFilter] = useState("open");
 
@@ -27,6 +29,16 @@ export default function TaskList() {
       setTasks(tasks.map(t => t.id === id ? { ...t, owner } : t));
     } catch {}
   };
+
+  const updateDueDate = async (id, due_date) => {
+    try {
+      await api.patch(`/tasks/${id}`, { due_date });
+      toast.success("Target completion date updated");
+      setTasks(tasks.map(t => t.id === id ? { ...t, due_date } : t));
+    } catch { toast.error("Failed to update target completion date"); }
+  };
+
+  const isViewOnly = user?.role === "director";
 
   if (tasks === null) {
     return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
@@ -90,30 +102,37 @@ export default function TaskList() {
                     <label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground block mb-1">Assigned Owner</label>
                     <input
                       defaultValue={task.owner}
+                      disabled={isViewOnly}
                       onBlur={(e) => updateOwner(task.id, e.target.value)}
-                      className="h-9 px-2.5 border border-input text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-primary w-44"
+                      className="h-9 px-2.5 border border-input text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-primary w-44 disabled:opacity-75 disabled:cursor-not-allowed text-foreground font-bold"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground block mb-1">Due Date</label>
-                    <div className="h-9 px-3 border border-border bg-muted/40 flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                      <CalendarBlank size={14} /> {task.due_date}
-                    </div>
+                    <label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground block mb-1">Target Completion Date</label>
+                    <input
+                      type="date"
+                      defaultValue={task.due_date}
+                      disabled={isViewOnly}
+                      onChange={(e) => updateDueDate(task.id, e.target.value)}
+                      className="h-9 px-2.5 border border-input text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-primary w-44 text-foreground font-bold cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                    />
                   </div>
                   <div className="pt-4 md:pt-5">
                     {task.status === "open" ? (
                       <button
                         onClick={() => updateStatus(task.id, "closed")}
-                        className="h-9 px-4 bg-emerald-600 text-white font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 hover:bg-emerald-700 transition-colors"
+                        disabled={isViewOnly}
+                        className="h-9 px-4 bg-emerald-600 text-white font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 hover:bg-emerald-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <CheckCircle weight="bold" size={15} /> Mark Resolved
+                        <CheckCircle weight="bold" size={15} /> {isViewOnly ? "Status: Open" : "Mark Resolved"}
                       </button>
                     ) : (
                       <button
                         onClick={() => updateStatus(task.id, "open")}
-                        className="h-9 px-4 border border-border text-xs font-bold tracking-wider uppercase text-muted-foreground hover:text-foreground hover:bg-white transition-colors"
+                        disabled={isViewOnly}
+                        className="h-9 px-4 border border-border text-xs font-bold tracking-wider uppercase text-muted-foreground hover:text-foreground hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Reopen Task
+                        {isViewOnly ? "Status: Resolved" : "Reopen Task"}
                       </button>
                     )}
                   </div>
