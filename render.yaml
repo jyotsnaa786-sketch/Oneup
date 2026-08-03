@@ -3,8 +3,8 @@ services:
     name: oneup-motors-audit
     env: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm --prefix backend install && npm --prefix frontend install --include=dev && npm --prefix frontend run build
+    startCommand: npm --prefix backend start
     envVars:
       - key: NODE_ENV
         value: production
