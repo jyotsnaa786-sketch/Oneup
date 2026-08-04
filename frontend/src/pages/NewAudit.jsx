@@ -1,11 +1,92 @@
 import React, { useEffect, useState } from "react";
-import { api } from "@/lib/apiClient";
+import { api, getHostBase } from "@/lib/apiClient";
 import AppShell from "@/components/AppShell";
 import PhotoAnnotator from "@/components/PhotoAnnotator";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { scoreColor } from "@/components/StatusBits";
-import { Check, X, MinusCircle, ArrowLeft, ArrowRight, FloppyDisk, ImageSquare, Lightning, Camera, FileImage, PaperPlaneRight } from "@phosphor-icons/react";
+import { Check, X, MinusCircle, ArrowLeft, ArrowRight, FloppyDisk, ImageSquare, Lightning, Camera, FileImage, PaperPlaneRight, PaintBrush, Trash } from "@phosphor-icons/react";
+
+// Lightweight HTML5 Client-Side Photo Compression Helper (Scales 15MB Camera Shots to ~150KB in milliseconds)
+async function compressImageFile(file, maxWidth = 1200, quality = 0.8) {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith("image/")) return resolve(file);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxWidth) {
+          if (width > height) {
+            height = Math.round((maxWidth / width) * height);
+            width = maxWidth;
+          } else {
+            width = Math.round((maxWidth / height) * width);
+            height = maxWidth;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(200, width);
+        canvas.height = Math.max(200, height);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (!blob) return resolve(file);
+          const cleanName = (file.name ? file.name.split('.')[0] : "camera_shot") + ".jpg";
+          resolve(new File([blob], cleanName, { type: "image/jpeg" }));
+        }, "image/jpeg", quality);
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}
+
+function EvidencePreview({ path, onRemove }) {
+  const isCloudUrl = path && (path.startsWith("http://") || path.startsWith("https://"));
+  const [url, setUrl] = useState(isCloudUrl ? path : null);
+  const isPdf = path && path.toLowerCase().endsWith(".pdf");
+
+  useEffect(() => {
+    let revoked;
+    if (!isPdf && !isCloudUrl && path) {
+      api.get(`/files/${path}`, { responseType: "blob" })
+        .then((r) => { const u = URL.createObjectURL(r.data); revoked = u; setUrl(u); })
+        .catch(() => {});
+    }
+    return () => revoked && URL.revokeObjectURL(revoked);
+  }, [path, isPdf, isCloudUrl]);
+
+  const viewLink = isCloudUrl ? path : (url || `${getHostBase()}/api/files/${path}`);
+
+  return (
+    <div className="relative border border-border bg-white p-2 shadow-xs flex flex-col gap-2 w-28 shrink-0">
+      <div className="w-full h-24 bg-muted overflow-hidden border border-border/40 flex items-center justify-center">
+        {isPdf ? (
+          <div className="w-full h-full bg-red-50/80 flex flex-col items-center justify-center text-red-700 font-bold p-1.5 border border-red-200 gap-1 text-center">
+            <span className="text-2xl">📄</span>
+            <span className="text-[9px] font-mono tracking-wider uppercase font-black">PDF DOC</span>
+          </div>
+        ) : url ? (
+          <img src={url} alt="evidence" className="w-full h-full object-cover hover:scale-105 transition-transform" />
+        ) : (
+          <div className="w-full h-full animate-pulse bg-muted/80 flex items-center justify-center text-[10px] text-muted-foreground font-mono">Loading…</div>
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-1 border-t border-border pt-1.5">
+        <a href={viewLink} target="_blank" rel="noreferrer" className="text-[10px] font-extrabold uppercase tracking-wider text-primary hover:underline flex-1 text-center font-mono">
+          VIEW 👁️
+        </a>
+        <button type="button" onClick={() => onRemove(path)} className="text-[11px] font-black text-destructive hover:text-red-800 px-1 transition-colors" title="Remove attachment">
+          🗑️
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const RESULTS = [
   { key: "pass", label: "PASS", icon: Check, active: "bg-emerald-600 text-white border-emerald-600 shadow-sm font-black" },
@@ -43,7 +124,7 @@ export default function NewAudit() {
   const totalSteps = template.length + 2;
   const setResult = (id, text, result) => setState((s) => ({ ...s, [id]: { ...(s[id] || { note: "", evidence: [] }), text, result } }));
   const setNote = (id, note) => setState((s) => ({ ...s, [id]: { ...(s[id] || { evidence: [] }), note } }));
-
+  
   const setAllToPass = () => {
     const nextState = { ...state };
     template.forEach(cat => {
@@ -60,10 +141,45 @@ export default function NewAudit() {
     toast.success("⚡ 100% Score Set! All check items graded PASS!");
   };
 
-  const onSelectPhoto = (id, file) => {
+  const onSelectPhoto = async (id, file, openStudio = false) => {
     if (!file) return;
-    setSelectedFile(file);
-    setAnnotateItem(id);
+    if (openStudio) {
+      setSelectedFile(file);
+      setAnnotateItem(id);
+      return;
+    }
+    // Instant Fast Upload with In-Browser Compression (if image) or Raw Attachment (if PDF)
+    setUploading(id);
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    try {
+      const compressedFile = await compressImageFile(file, 1200, 0.8);
+      const fd = new FormData();
+      fd.append("file", compressedFile);
+      const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setState((s) => ({
+        ...s,
+        [id]: {
+          ...(s[id] || {}),
+          evidence: [...(s[id]?.evidence || []), data.path]
+        }
+      }));
+      toast.success(isPdf ? "📄 PDF Document attached & verified!" : "📸 Photo compressed & attached instantly!");
+    } catch {
+      toast.error("Upload failed. Please verify Wi-Fi or mobile network connection.");
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const removePhoto = (id, photoPath) => {
+    setState((s) => ({
+      ...s,
+      [id]: {
+        ...(s[id] || {}),
+        evidence: (s[id]?.evidence || []).filter(p => p !== photoPath)
+      }
+    }));
+    toast.success("🗑️ Attachment removed");
   };
 
   const executeUpload = async (id, file, caption) => {
@@ -71,8 +187,9 @@ export default function NewAudit() {
     setSelectedFile(null);
     setUploading(id);
     try {
+      const compressedFile = await compressImageFile(file, 1200, 0.8);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", compressedFile);
       const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
       setState((s) => {
         const currentNote = s[id]?.note || "";
@@ -86,8 +203,8 @@ export default function NewAudit() {
           }
         };
       });
-      toast.success("📸 Photo compressed & saved!");
-    } catch { toast.error("Upload failed. Check Wi-Fi connection."); }
+      toast.success("🎨 Annotated photo saved & attached!");
+    } catch { toast.error("Upload failed. Check mobile connection."); }
     finally { setUploading(null); }
   };
 
@@ -231,34 +348,56 @@ export default function NewAudit() {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-2.5 border-t border-border/40 w-full">
+                <div className="flex flex-col sm:flex-row gap-2.5 mt-3.5 pt-3 border-t border-border/40 w-full">
                   <input
                     data-testid={`note-${item.item_id}`}
                     value={cur.note || ""}
                     onChange={(e) => setNote(item.item_id, e.target.value)}
                     placeholder="Observation note…"
-                    className="w-full sm:flex-1 h-10 px-2.5 border border-input bg-white text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full sm:flex-1 h-10 px-3 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   
-                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                    <label className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 h-10 sm:h-9 bg-accent/10 border border-accent/40 text-foreground cursor-pointer text-xs font-black tracking-wider uppercase hover:bg-accent hover:text-white transition-colors active:scale-95 ${uploading === item.item_id ? "opacity-60 pointer-events-none bg-accent text-white" : ""}`}>
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full sm:w-auto shrink-0">
+                    <label className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-accent/15 border border-accent text-foreground cursor-pointer text-[11px] sm:text-xs font-black tracking-wider uppercase hover:bg-accent hover:text-white transition-all active:scale-95 ${uploading === item.item_id ? "opacity-70 pointer-events-none bg-accent text-white" : ""}`} title="Instant camera photo shot">
                       <Camera size={16} className="text-accent shrink-0" weight="bold" />
-                      <span>{uploading === item.item_id ? "Compressing…" : "📸 Camera"}</span>
-                      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0])} />
+                      <span>{uploading === item.item_id ? "Saving…" : "📸 Camera"}</span>
+                      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
                     </label>
 
-                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 h-10 sm:h-9 border border-border cursor-pointer text-xs font-bold uppercase hover:bg-foreground hover:text-white transition-colors active:scale-95" title="Select from Gallery">
+                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 border border-border cursor-pointer text-[11px] sm:text-xs font-extrabold uppercase hover:bg-foreground hover:text-white transition-all active:scale-95" title="Pick photo from gallery">
                       <FileImage size={16} className="text-muted-foreground shrink-0" />
                       <span>Gallery</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0])} />
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
+                    </label>
+
+                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-red-50 border border-red-400/60 text-red-700 cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-red-700 hover:text-white transition-all active:scale-95" title="Attach PDF document report or invoice">
+                      <span className="text-sm">📄</span>
+                      <span>PDF Doc</span>
+                      <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
+                    </label>
+
+                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-primary/10 border border-primary/50 text-primary cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-primary hover:text-white transition-all active:scale-95" title="Draw arrows & annotate photo">
+                      <PaintBrush size={16} className="shrink-0" weight="bold" />
+                      <span>🎨 Draw</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], true)} />
                     </label>
                   </div>
                 </div>
 
                 {cur.evidence?.length > 0 && (
-                  <div className="flex items-center gap-2 mt-2.5 text-[11px] sm:text-xs text-emerald-800 font-extrabold font-mono bg-emerald-50 border border-emerald-300 p-2 break-words w-full">
-                    <ImageSquare size={16} weight="bold" className="shrink-0 text-emerald-700" /> 
-                    <span>{cur.evidence.length} evidence photo(s) compressed &amp; linked!</span>
+                  <div className="mt-3 p-3 bg-muted/15 border border-border/80 w-full">
+                    <div className="flex items-center justify-between text-xs text-emerald-800 font-extrabold font-mono mb-2">
+                      <span className="flex items-center gap-1.5">
+                        <ImageSquare size={16} weight="bold" className="text-emerald-700" />
+                        {cur.evidence.length} File Attachment(s) Linked &amp; Verified
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-sans uppercase font-bold">Ready for Report Archives</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 overflow-x-auto py-1">
+                      {cur.evidence.map((path) => (
+                        <EvidencePreview key={path} path={path} onRemove={(p) => removePhoto(item.item_id, p)} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

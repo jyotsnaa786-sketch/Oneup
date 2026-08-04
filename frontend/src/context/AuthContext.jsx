@@ -16,6 +16,12 @@ export function AuthProvider({ children }) {
         setUser(false);
       })
       .finally(() => setLoading(false));
+
+    // Automated Browser Keep-Alive Heartbeat (Prevents cloud server inactivity sleep while tab is open)
+    const pingInterval = setInterval(() => {
+      api.get("/ping").catch(() => {});
+    }, 240000);
+    return () => clearInterval(pingInterval);
   }, []);
 
   const login = async (email, password) => {
@@ -36,12 +42,12 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
+  const logout = () => {
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem("oneup_token");
     }
     setUser(false);
+    api.post("/auth/logout").catch(() => {});
   };
 
   return (

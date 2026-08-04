@@ -46,7 +46,9 @@ export default function PhotoAnnotator({ file, onClose, onSave }) {
     const rect = cvs.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    const scaleX = cvs.width / (rect.width || 1);
+    const scaleY = cvs.height / (rect.height || 1);
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
   };
 
   const startDraw = (e) => {

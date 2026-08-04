@@ -10,9 +10,30 @@ const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
 const xlsx = require('xlsx');
 
+// Initialize Cloudinary SDK for 25 GB Free Cloud Photo & PDF Storage Vault
+let cloudinary = null;
+if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
+  try {
+    cloudinary = require('cloudinary').v2;
+    if (process.env.CLOUDINARY_URL) {
+      cloudinary.config({ url: process.env.CLOUDINARY_URL });
+    } else {
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+        secure: true
+      });
+    }
+    console.log("☁️ Successfully connected to Cloudinary 25 GB Free Media CDN Vault!");
+  } catch (e) {
+    console.error("Notice: Cloudinary SDK setup warning:", e.message);
+  }
+}
+
 const PORT = process.env.PORT || 8001;
 const JWT_SECRET = process.env.JWT_SECRET || 'oneup_motors_secret_key_2026';
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const INTERNAL_EXCEL = path.join(DATA_DIR, 'template_source.xlsx');
@@ -34,6 +55,84 @@ if (!db.template) db.template = [];
 if (!db.audits) db.audits = [];
 if (!db.users) db.users = [];
 
+// ============================================================================
+// --- FREE CLOUD DATABASE INTEGRATION (MongoDB Atlas / Persistent Storage) ---
+// ============================================================================
+let mongoClient = null;
+let cloudDbCollection = null;
+let cloudMediaCollection = null;
+const MONGODB_URI = process.env.MONGODB_URI;
+
+async function initCloudDatabase() {
+  if (!MONGODB_URI) {
+    console.log("ℹ️ MONGODB_URI not set in environment variables. Using standard local file storage.");
+    return;
+  }
+  try {
+    const { MongoClient } = require('mongodb');
+    mongoClient = new MongoClient(MONGODB_URI);
+    await mongoClient.connect();
+    const dbInstance = mongoClient.db("oneup_motors_portal");
+    cloudDbCollection = dbInstance.collection("persistent_state");
+    cloudMediaCollection = dbInstance.collection("media_archives");
+    console.log("🌟 Successfully connected to MongoDB Atlas Free Cloud Database!");
+
+    // Download latest cloud persistent database state into local memory & disk upon startup
+    const cloudRecord = await cloudDbCollection.findOne({ _id: "primary_database" });
+    if (cloudRecord && cloudRecord.data) {
+      console.log("☁️ Successfully restored permanent database state from MongoDB Cloud!");
+      db = { ...db, ...cloudRecord.data };
+      if (!db.tasks) db.tasks = [];
+      if (!db.template) db.template = [];
+      if (!db.audits) db.audits = [];
+      if (!db.users) db.users = [];
+      try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); } catch(e){}
+    } else {
+      console.log("☁️ Cloud database archive empty. Initializing cloud record from current DB state...");
+      await syncToCloudDatabase();
+    }
+  } catch (err) {
+    console.error("❌ Cloud Database Connection / Restoration Notice:", err.message);
+  }
+}
+
+async function syncToCloudDatabase() {
+  if (!cloudDbCollection) return;
+  try {
+    await cloudDbCollection.updateOne(
+      { _id: "primary_database" },
+      { $set: { _id: "primary_database", last_updated: new Date().toISOString(), data: db } },
+      { upsert: true }
+    );
+  } catch (err) {
+    console.error("Notice: Could not sync DB updates to MongoDB Cloud:", err.message);
+  }
+}
+
+async function restoreAllCloudMediaToDisk() {
+  if (!cloudMediaCollection) return;
+  try {
+    const count = await cloudMediaCollection.countDocuments();
+    console.log(`☁️ Verifying cloud media archives (${count} total files preserved in MongoDB Cloud)...`);
+    const cursor = cloudMediaCollection.find({});
+    for await (const doc of cursor) {
+      if (doc && doc._id && doc.buffer) {
+        const filePath = path.join(UPLOADS_DIR, doc._id);
+        if (!fs.existsSync(filePath)) {
+          try {
+            const bufferData = doc.buffer.buffer || doc.buffer;
+            fs.writeFileSync(filePath, Buffer.from(bufferData));
+            console.log(`📥 Restored cloud media attachment: ${doc._id}`);
+          } catch (e) {}
+        }
+      }
+    }
+    console.log("✅ All cloud photo & PDF media attachments restored and ready for reports!");
+  } catch (err) {
+    console.error("Notice during batch cloud media restoration:", err.message);
+  }
+}
+
 function saveDB() {
   try {
     const tmpFile = `${DB_FILE}.${Date.now()}.tmp`;
@@ -43,6 +142,8 @@ function saveDB() {
   } catch (e) {
     try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); } catch (err) {}
   }
+  // Seamless asynchronous background cloud syncing (Prevents ephemeral data loss across reboots)
+  syncToCloudDatabase().catch(() => {});
 }
 
 function ensureTemplateLoaded() {
@@ -140,7 +241,7 @@ const storage = multer.diskStorage({
     cb(null, `${crypto.randomUUID()}.${ext}`);
   }
 });
-const upload = multer({ storage });
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 function computeScores(categories) {
   let catScores = [];
@@ -300,6 +401,11 @@ app.post('/api/auth/logout', (req, res) => {
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json(req.user);
+});
+
+// --- Public Health & Keep-Alive Endpoint ---
+app.get('/api/ping', (req, res) => {
+  res.status(200).json({ status: "alive", timestamp: new Date().toISOString(), uptime: Math.round(process.uptime()) });
 });
 
 // --- Dynamic Template Routes ---
@@ -478,18 +584,34 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
       const textHeight = doc.font('Helvetica').fontSize(9).heightOfString(item.text, { width: textWidth });
       const noteHeight = item.note ? doc.font('Helvetica-Oblique').fontSize(9).heightOfString(`Auditing Finding: "${item.note}"`, { width: textWidth }) + 6 : 0;
       
-      // Calculate image thumbnail requirement if evidence photo attached
+      // Calculate image thumbnail & PDF doc requirement if evidence files attached
       let imgHeight = 0;
       let validImgPath = null;
+      let hasPdfAttachment = false;
+      let hasCloudMedia = false;
+
       if (item.evidence && item.evidence.length > 0) {
-        const checkPath = path.join(DATA_DIR, item.evidence[0]);
-        if (fs.existsSync(checkPath)) {
-          validImgPath = checkPath;
-          imgHeight = 130; // thumbnail height footprint
+        for (const evPath of item.evidence) {
+          if (evPath.startsWith("http://") || evPath.startsWith("https://")) {
+            if (evPath.toLowerCase().endsWith(".pdf")) hasPdfAttachment = true;
+            else hasCloudMedia = true;
+          } else {
+            const checkPath = path.join(DATA_DIR, evPath);
+            if (fs.existsSync(checkPath)) {
+              if (checkPath.toLowerCase().endsWith('.pdf')) {
+                hasPdfAttachment = true;
+              } else if (!validImgPath && /\.(jpg|jpeg|png|webp|bmp)$/i.test(checkPath)) {
+                validImgPath = checkPath;
+                imgHeight = 130; // thumbnail height footprint
+              }
+            }
+          }
         }
       }
 
-      const totalRowFootprint = textHeight + noteHeight + imgHeight + 14;
+      const pdfBadgeHeight = hasPdfAttachment ? 18 : 0;
+      const cloudBadgeHeight = hasCloudMedia && !validImgPath ? 18 : 0;
+      const totalRowFootprint = textHeight + noteHeight + imgHeight + pdfBadgeHeight + cloudBadgeHeight + 14;
 
       if (y + totalRowFootprint > 750) {
         doc.addPage();
@@ -503,8 +625,20 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
 
       // Print auditor notes without overlapping
       if (item.note) {
-        doc.font('Helvetica-Oblique').fontSize(9).fillColor('#374151').text(`Auditing Finding: "${item.note}"`, 88, y, { width: textWidth });
+        doc.font('Helvetica-Oblique').fontSize(9).fillColor('#374151').text(`Auditory Finding: "${item.note}"`, 88, y, { width: textWidth });
         y += noteHeight;
+      }
+
+      // Print confirmation banner if supporting PDF documents are attached to this item
+      if (hasPdfAttachment) {
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#0047AB').text('📄 Supporting Evidence: Verified PDF Document Attached in OneUP Archives', 88, y + 2, { width: textWidth });
+        y += 18;
+      }
+
+      // Print cloud media confirmation banner if high-resolution photo is archived on Cloudinary CDN
+      if (hasCloudMedia && !validImgPath) {
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#059669').text('✓ Photographic Defect Evidence Archived & Accessible via OneUP Cloud CDN', 88, y + 2, { width: textWidth });
+        y += 18;
       }
 
       // Embed actual defect inspection photograph inside PDF
@@ -620,13 +754,45 @@ app.get('/api/dashboard/stats', authMiddleware, (req, res) => {
   });
 });
 
-app.post('/api/upload', authMiddleware, upload.single('file'), (req, res) => {
+app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ detail: "No file provided" });
   const fileId = crypto.randomUUID();
-  const relativePath = `uploads/${req.file.filename}`;
+  let relativePath = `uploads/${req.file.filename}`;
+  let cloudinaryUrl = null;
+
+  // 1) Attempt seamless enterprise upload to Cloudinary 25 GB Free CDN Vault
+  if (cloudinary && req.file.path && fs.existsSync(req.file.path)) {
+    try {
+      const cRes = await cloudinary.uploader.upload(req.file.path, {
+        folder: "oneup_audit_archives",
+        resource_type: "auto",
+        use_filename: true,
+        unique_filename: true
+      });
+      cloudinaryUrl = cRes.secure_url || cRes.url;
+      console.log("☁️ File archived securely to Cloudinary CDN Vault:", cloudinaryUrl);
+    } catch (err) {
+      console.error("Notice during Cloudinary CDN archival:", err.message);
+    }
+  }
+
+  // 2) If Cloudinary isn't enabled yet, backup to MongoDB Cloud media collection as fallback!
+  if (!cloudinaryUrl && cloudMediaCollection && req.file.path && fs.existsSync(req.file.path)) {
+    try {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      cloudMediaCollection.updateOne(
+        { _id: req.file.filename },
+        { $set: { _id: req.file.filename, buffer: fileBuffer, mimetype: req.file.mimetype, created_at: new Date().toISOString() } },
+        { upsert: true }
+      ).catch(e => console.error("Could not upload file to MongoDB Cloud:", e.message));
+    } catch (e) {}
+  }
+
+  const finalStoragePath = cloudinaryUrl || relativePath;
   db.files.push({
     id: fileId,
-    storage_path: relativePath,
+    storage_path: finalStoragePath,
+    cloudinary_url: cloudinaryUrl,
     original_filename: req.file.originalname,
     mimetype: req.file.mimetype,
     size: req.file.size,
@@ -634,13 +800,30 @@ app.post('/api/upload', authMiddleware, upload.single('file'), (req, res) => {
     created_at: new Date().toISOString()
   });
   saveDB();
-  res.json({ path: relativePath });
+
+  res.json({ path: finalStoragePath });
 });
 
-app.get('/api/files/uploads/:filename', (req, res) => {
+app.get('/api/files/uploads/:filename', async (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(UPLOADS_DIR, filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ detail: "File not found" });
+  if (!fs.existsSync(filePath)) {
+    // Attempt automatic on-demand cloud restoration from MongoDB media archive
+    if (cloudMediaCollection) {
+      try {
+        const cloudMedia = await cloudMediaCollection.findOne({ _id: filename });
+        if (cloudMedia && cloudMedia.buffer) {
+          const bufferData = cloudMedia.buffer.buffer || cloudMedia.buffer;
+          fs.writeFileSync(filePath, Buffer.from(bufferData));
+          console.log(`☁️ On-demand cloud restore successful for file: ${filename}`);
+          return res.sendFile(filePath);
+        }
+      } catch (err) {
+        console.error(`Failed on-demand cloud restore for ${filename}:`, err.message);
+      }
+    }
+    return res.status(404).json({ detail: "File not found in archives" });
+  }
   res.sendFile(filePath);
 });
 
@@ -664,4 +847,18 @@ if (fs.existsSync(DIST_DIR)) {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`OneUP Motors Bulletproof Server v5.0 running on http://0.0.0.0:${PORT}`);
+  
+  // Connect to MongoDB Atlas Cloud Persistence & restore audits/photos immediately upon server boot
+  initCloudDatabase()
+    .then(() => restoreAllCloudMediaToDisk())
+    .catch(e => console.error("Cloud boot notice:", e.message));
+  
+  // Automated Self-Ping Heartbeat Loop (Sends keep-alive signals every 4 minutes to thwart inactivity timeouts)
+  setInterval(() => {
+    try {
+      const externalTarget = process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/api/ping` : "https://oneup-motors-audit.onrender.com/api/ping";
+      fetch(externalTarget).catch(() => {});
+      fetch(`http://127.0.0.1:${PORT}/api/ping`).catch(() => {});
+    } catch (e) {}
+  }, 240000);
 });

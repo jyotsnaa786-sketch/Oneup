@@ -35,7 +35,7 @@ function CategoryBlock({ cat, catScore }) {
             {item.evidence?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {item.evidence.map((path) => (
-                  <a key={path} href={`${getHostBase()}/api/files/${path}`} target="_blank" rel="noreferrer">
+                  <a key={path} href={path && (path.startsWith("http://") || path.startsWith("https://")) ? path : `${getHostBase()}/api/files/${path}`} target="_blank" rel="noreferrer">
                     <EvidenceThumb path={path} />
                   </a>
                 ))}
@@ -49,17 +49,32 @@ function CategoryBlock({ cat, catScore }) {
 }
 
 function EvidenceThumb({ path }) {
-  const [url, setUrl] = useState(null);
+  const isCloudUrl = path && (path.startsWith("http://") || path.startsWith("https://"));
+  const [url, setUrl] = useState(isCloudUrl ? path : null);
+  const isPdf = path && path.toLowerCase().endsWith(".pdf");
+
   useEffect(() => {
     let revoked;
-    api.get(`/files/${path}`, { responseType: "blob" })
-      .then((r) => { const u = URL.createObjectURL(r.data); revoked = u; setUrl(u); })
-      .catch(() => {});
+    if (!isPdf && !isCloudUrl && path) {
+      api.get(`/files/${path}`, { responseType: "blob" })
+        .then((r) => { const u = URL.createObjectURL(r.data); revoked = u; setUrl(u); })
+        .catch(() => {});
+    }
     return () => revoked && URL.revokeObjectURL(revoked);
-  }, [path]);
+  }, [path, isPdf, isCloudUrl]);
+
   return (
-    <div className="w-16 h-16 sm:w-20 sm:h-20 border border-border bg-muted overflow-hidden hover:opacity-80 transition-opacity" title="Click to view full photo" data-testid="evidence-thumb">
-      {url ? <img src={url} alt="evidence" className="w-full h-full object-cover" /> : <div className="w-full h-full animate-pulse" />}
+    <div className="w-16 h-16 sm:w-20 sm:h-20 border border-border bg-white overflow-hidden hover:opacity-85 transition-all shadow-2xs flex items-center justify-center" title={isPdf ? "Click to open PDF report" : "Click to view full photo"} data-testid="evidence-thumb">
+      {isPdf ? (
+        <div className="w-full h-full bg-red-50 text-red-700 font-bold flex flex-col items-center justify-center border border-red-200 p-1 text-center">
+          <span className="text-xl">📄</span>
+          <span className="text-[8px] font-mono uppercase tracking-widest font-black">PDF</span>
+        </div>
+      ) : url ? (
+        <img src={url} alt="evidence" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full animate-pulse bg-muted flex items-center justify-center text-[9px] text-muted-foreground font-mono">Loading…</div>
+      )}
     </div>
   );
 }
