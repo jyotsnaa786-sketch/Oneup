@@ -12,11 +12,12 @@ const xlsx = require('xlsx');
 
 // Initialize Cloudinary SDK for 25 GB Free Cloud Photo & PDF Storage Vault
 let cloudinary = null;
-if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
+const DEFAULT_CLOUDINARY_URL = process.env.CLOUDINARY_URL || "cloudinary://394641678596358:Y4RIlu1R7DcCjCYwDz2HnBHpfss@iigoe3bx";
+if (DEFAULT_CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
   try {
     cloudinary = require('cloudinary').v2;
-    if (process.env.CLOUDINARY_URL) {
-      cloudinary.config({ url: process.env.CLOUDINARY_URL });
+    if (DEFAULT_CLOUDINARY_URL) {
+      cloudinary.config({ url: DEFAULT_CLOUDINARY_URL });
     } else {
       cloudinary.config({
         cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -25,7 +26,7 @@ if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
         secure: true
       });
     }
-    console.log("☁️ Successfully connected to Cloudinary 25 GB Free Media CDN Vault!");
+    console.log("☁️ Successfully connected to Cloudinary 25 GB Free Media CDN Vault (iigoe3bx)!");
   } catch (e) {
     console.error("Notice: Cloudinary SDK setup warning:", e.message);
   }
