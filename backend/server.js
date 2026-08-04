@@ -62,7 +62,7 @@ if (!db.users) db.users = [];
 let mongoClient = null;
 let cloudDbCollection = null;
 let cloudMediaCollection = null;
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://jyotsnaa786_db_user:JLO%40778899@cluster0.mmwbfr7.mongodb.net/oneup_motors_portal?retryWrites=true&w=majority&appName=Cluster0";
 
 async function initCloudDatabase() {
   if (!MONGODB_URI) {
