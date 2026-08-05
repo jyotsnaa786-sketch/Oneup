@@ -92,7 +92,7 @@ export default function AuditDetail() {
   if (!audit) return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
 
   const scoreOf = (cid) => (audit.category_scores || []).find((c) => c.category_id === cid);
-  const canExport = user?.role === "admin" || user?.role === "director";
+  const canExport = Boolean(user);
 
   const downloadPdf = () => {
     window.open(`${getHostBase()}/api/audits/${id}/pdf?auth=${encodeURIComponent(document.cookie)}`, "_blank");

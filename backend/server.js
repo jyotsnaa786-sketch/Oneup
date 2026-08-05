@@ -517,10 +517,33 @@ app.patch('/api/tasks/:id', authMiddleware, preventDirectorEdits, (req, res) => 
   res.json(task);
 });
 
-// --- ADMIN ONLY EXPORT ENGINES (PDF & EXCEL) ---
-app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
+// --- UNIVERSAL EXPORT ENGINES (PDF & EXCEL FOR ALL LOGGED IN EMPLOYEES & DIRECTORS) ---
+app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
   const audit = (db.audits || []).find(a => a.id === req.params.id);
   if (!audit) return res.status(404).json({ detail: "Audit not found" });
+
+  // Pre-fetch external cloud images (Cloudinary CDN) into memory buffers so pdfkit physically embeds actual photos!
+  const imageBuffers = {};
+  for (const cat of (audit.categories || [])) {
+    for (const item of (cat.items || [])) {
+      if (item.evidence && item.evidence.length > 0) {
+        for (const evPath of item.evidence) {
+          if ((evPath.startsWith("http://") || evPath.startsWith("https://")) && !evPath.toLowerCase().endsWith(".pdf")) {
+            try {
+              const fetchRes = await fetch(evPath);
+              if (fetchRes.ok) {
+                const arrayBuffer = await fetchRes.arrayBuffer();
+                imageBuffers[evPath] = Buffer.from(arrayBuffer);
+                console.log(`📸 Pre-fetched cloud image for PDF embedding: ${evPath}`);
+              }
+            } catch (e) {
+              console.error("Notice: Could not fetch cloud photo for PDF:", evPath, e.message);
+            }
+          }
+        }
+      }
+    }
+  }
 
   const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
   const filename = `OneUP_Motors_Audit_${audit.dealership_name.replace(/\s+/g, '_')}_${audit.audit_date}.pdf`;
@@ -583,19 +606,22 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
       
       const textWidth = 430;
       const textHeight = doc.font('Helvetica').fontSize(9).heightOfString(item.text, { width: textWidth });
-      const noteHeight = item.note ? doc.font('Helvetica-Oblique').fontSize(9).heightOfString(`Auditing Finding: "${item.note}"`, { width: textWidth }) + 6 : 0;
+      const noteHeight = item.note ? doc.font('Helvetica-Oblique').fontSize(9).heightOfString(`Audited Finding: "${item.note}"`, { width: textWidth }) + 6 : 0;
       
       // Calculate image thumbnail & PDF doc requirement if evidence files attached
       let imgHeight = 0;
       let validImgPath = null;
       let hasPdfAttachment = false;
-      let hasCloudMedia = false;
 
       if (item.evidence && item.evidence.length > 0) {
         for (const evPath of item.evidence) {
           if (evPath.startsWith("http://") || evPath.startsWith("https://")) {
-            if (evPath.toLowerCase().endsWith(".pdf")) hasPdfAttachment = true;
-            else hasCloudMedia = true;
+            if (evPath.toLowerCase().endsWith(".pdf")) {
+              hasPdfAttachment = true;
+            } else if (!validImgPath && imageBuffers[evPath]) {
+              validImgPath = imageBuffers[evPath];
+              imgHeight = 130; // thumbnail height footprint for cloud photo buffer
+            }
           } else {
             const checkPath = path.join(DATA_DIR, evPath);
             if (fs.existsSync(checkPath)) {
@@ -603,7 +629,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
                 hasPdfAttachment = true;
               } else if (!validImgPath && /\.(jpg|jpeg|png|webp|bmp)$/i.test(checkPath)) {
                 validImgPath = checkPath;
-                imgHeight = 130; // thumbnail height footprint
+                imgHeight = 130; // thumbnail height footprint for local file
               }
             }
           }
@@ -611,8 +637,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
       }
 
       const pdfBadgeHeight = hasPdfAttachment ? 18 : 0;
-      const cloudBadgeHeight = hasCloudMedia && !validImgPath ? 18 : 0;
-      const totalRowFootprint = textHeight + noteHeight + imgHeight + pdfBadgeHeight + cloudBadgeHeight + 14;
+      const totalRowFootprint = textHeight + noteHeight + imgHeight + pdfBadgeHeight + 14;
 
       if (y + totalRowFootprint > 750) {
         doc.addPage();
@@ -626,7 +651,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
 
       // Print auditor notes without overlapping
       if (item.note) {
-        doc.font('Helvetica-Oblique').fontSize(9).fillColor('#374151').text(`Auditory Finding: "${item.note}"`, 88, y, { width: textWidth });
+        doc.font('Helvetica-Oblique').fontSize(9).fillColor('#374151').text(`Audited Finding: "${item.note}"`, 88, y, { width: textWidth });
         y += noteHeight;
       }
 
@@ -636,20 +661,14 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
         y += 18;
       }
 
-      // Print cloud media confirmation banner if high-resolution photo is archived on Cloudinary CDN
-      if (hasCloudMedia && !validImgPath) {
-        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#059669').text('✓ Photographic Defect Evidence Archived & Accessible via OneUP Cloud CDN', 88, y + 2, { width: textWidth });
-        y += 18;
-      }
-
-      // Embed actual defect inspection photograph inside PDF
+      // Physically render actual defect inspection photograph inside PDF!
       if (validImgPath) {
         try {
           doc.image(validImgPath, 88, y + 2, { width: 160, height: 115, fit: [160, 115], align: 'left' });
-          doc.font('Helvetica-Bold').fontSize(8).fillColor('#059669').text('✓ Photographic Defect Evidence Attached', 255, y + 15);
+          doc.font('Helvetica-Bold').fontSize(8).fillColor('#059669').text('✓ Verified Photographic Defect Evidence', 255, y + 15);
           y += 125;
         } catch (err) {
-          console.error("Could not render thumbnail to PDF:", err);
+          console.error("Could not render photo to PDF:", err);
         }
       }
 
@@ -671,7 +690,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, (req, res) => {
   doc.end();
 });
 
-app.get('/api/audits/:id/excel', authMiddleware, adminOrDirector, (req, res) => {
+app.get('/api/audits/:id/excel', authMiddleware, (req, res) => {
   const audit = (db.audits || []).find(a => a.id === req.params.id);
   if (!audit) return res.status(404).json({ detail: "Audit not found" });
 
