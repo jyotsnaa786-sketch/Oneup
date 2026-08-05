@@ -62,6 +62,7 @@ if (!db.users) db.users = [];
 let mongoClient = null;
 let cloudDbCollection = null;
 let cloudMediaCollection = null;
+let lastCloudError = null;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://jyotsnaa786_db_user:JLO%40778899@cluster0.mmwbfr7.mongodb.net/oneup_motors_portal?retryWrites=true&w=majority&appName=Cluster0";
 
 async function initCloudDatabase() {
@@ -76,6 +77,7 @@ async function initCloudDatabase() {
     const dbInstance = mongoClient.db("oneup_motors_portal");
     cloudDbCollection = dbInstance.collection("persistent_state");
     cloudMediaCollection = dbInstance.collection("media_archives");
+    lastCloudError = null;
     console.log("🌟 Successfully connected to MongoDB Atlas Free Cloud Database!");
 
     // Download latest cloud persistent database state into local memory & disk upon startup
@@ -93,19 +95,25 @@ async function initCloudDatabase() {
       await syncToCloudDatabase();
     }
   } catch (err) {
+    lastCloudError = "Boot Error: " + (err.message || String(err));
     console.error("❌ Cloud Database Connection / Restoration Notice:", err.message);
   }
 }
 
 async function syncToCloudDatabase() {
-  if (!cloudDbCollection) return;
+  if (!cloudDbCollection) {
+    lastCloudError = lastCloudError || "Sync skipped: MongoDB collection not connected.";
+    return;
+  }
   try {
     await cloudDbCollection.updateOne(
       { _id: "primary_database" },
       { $set: { _id: "primary_database", last_updated: new Date().toISOString(), data: db } },
       { upsert: true }
     );
+    lastCloudError = null;
   } catch (err) {
+    lastCloudError = "Sync Error: " + (err.message || String(err));
     console.error("Notice: Could not sync DB updates to MongoDB Cloud:", err.message);
   }
 }
@@ -845,6 +853,16 @@ app.get('/api/files/uploads/:filename', async (req, res) => {
     return res.status(404).json({ detail: "File not found in archives" });
   }
   res.sendFile(filePath);
+});
+
+// --- CLOUD DIAGNOSTIC & MONITORING ENDPOINT ---
+app.get('/api/system/cloud-status', (req, res) => {
+  res.json({
+    mongodb_connected: Boolean(cloudDbCollection),
+    last_cloud_error: lastCloudError || "None (Operating Cleanly)",
+    total_audits_in_memory: db.audits ? db.audits.length : 0,
+    cloudinary_initialized: Boolean(cloudinary)
+  });
 });
 
 // --- SERVE COMPILED FRONTEND WITH ZERO-CACHE HEADERS ---
