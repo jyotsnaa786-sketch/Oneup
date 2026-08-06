@@ -18,7 +18,7 @@ export default function AuditList() {
       await api.delete(`/audits/${id}`);
       toast.success("Audit deleted");
       setAudits((a) => a.filter((x) => x.id !== id));
-    } catch {
+    } catch (e) {
       toast.error("Delete failed");
     }
   };
@@ -45,7 +45,7 @@ export default function AuditList() {
           data-testid="audit-search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search dealership or location…"
+          placeholder="Search dealership or locationâ€¦"
           className="w-full h-10 pl-9 pr-3 border border-input bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
         />
       </div>

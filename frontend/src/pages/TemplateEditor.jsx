@@ -17,7 +17,7 @@ export default function TemplateEditor() {
     try {
       await api.put("/audit-template", template);
       toast.success("Audit Template successfully updated across all dealerships!");
-    } catch {
+    } catch (e) {
       toast.error("Failed to update template");
     } finally {
       setSaving(false);
@@ -71,7 +71,7 @@ export default function TemplateEditor() {
           data-testid="save-template"
           className="h-11 px-6 bg-primary text-white font-bold text-xs tracking-[0.2em] uppercase flex items-center gap-2 hover:bg-blue-800 transition-colors disabled:opacity-60"
         >
-          <FloppyDisk weight="bold" size={18} /> {saving ? "Saving…" : "Save Template Changes"}
+          <FloppyDisk weight="bold" size={18} /> {saving ? "Savingâ€¦" : "Save Template Changes"}
         </button>
       </div>
 

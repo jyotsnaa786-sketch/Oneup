@@ -95,7 +95,7 @@ function CategoryBlock({ cat, catScore, isEditing, onUpdateItemResult, onUpdateI
                 />
               </div>
             ) : (
-              item.note && <p className="text-xs text-muted-foreground mt-2 italic font-mono bg-muted/40 p-2 border border-border">“{item.note}”</p>
+              item.note && <p className="text-xs text-muted-foreground mt-2 italic font-mono bg-muted/40 p-2 border border-border">â€œ{item.note}â€</p>
             )}
 
             <div className="mt-3">
@@ -113,7 +113,7 @@ function CategoryBlock({ cat, catScore, isEditing, onUpdateItemResult, onUpdateI
                           className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md transition-transform active:scale-95 z-10"
                           title="Delete photo"
                         >
-                          ×
+                          Ã—
                         </button>
                       )}
                     </div>
@@ -169,13 +169,13 @@ function EvidenceThumb({ path }) {
     <div className="w-16 h-16 sm:w-20 sm:h-20 border border-border bg-white overflow-hidden hover:opacity-85 transition-all shadow-2xs flex items-center justify-center" title={isPdf ? "Click to open PDF report" : "Click to view full photo"} data-testid="evidence-thumb">
       {isPdf ? (
         <div className="w-full h-full bg-red-50 text-red-700 font-bold flex flex-col items-center justify-center border border-red-200 p-1 text-center">
-          <span className="text-xl">📄</span>
+          <span className="text-xl">ðŸ“„</span>
           <span className="text-[8px] font-mono uppercase tracking-widest font-black">PDF</span>
         </div>
       ) : url ? (
         <img src={url} alt="evidence" className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full animate-pulse bg-muted flex items-center justify-center text-[9px] text-muted-foreground font-mono">Loading…</div>
+        <div className="w-full h-full animate-pulse bg-muted flex items-center justify-center text-[9px] text-muted-foreground font-mono">Loadingâ€¦</div>
       )}
     </div>
   );
@@ -205,7 +205,7 @@ export default function AuditDetail() {
   const startEditing = () => {
     setEditAudit(JSON.parse(JSON.stringify(audit)));
     setIsEditing(true);
-    toast.info("✏️ Admin Edit Mode Activated. Modify scores, notes, or photos below.");
+    toast.info("âœï¸ Admin Edit Mode Activated. Modify scores, notes, or photos below.");
   };
 
   const cancelEditing = () => {
@@ -221,7 +221,7 @@ export default function AuditDetail() {
       setAudit(data);
       setIsEditing(false);
       setEditAudit(null);
-      toast.success("✨ Admin modifications permanently saved & synchronized with cloud database!");
+      toast.success("âœ¨ Admin modifications permanently saved & synchronized with cloud database!");
     } catch (err) {
       toast.error("Failed to save administrative updates. Ensure network connection.");
     } finally {
@@ -288,8 +288,8 @@ export default function AuditDetail() {
         }
         return next;
       });
-      toast.success(isPdf ? "📄 PDF Document uploaded!" : "📸 Photo compressed & attached!");
-    } catch {
+      toast.success(isPdf ? "ðŸ“„ PDF Document uploaded!" : "ðŸ“¸ Photo compressed & attached!");
+    } catch (e) {
       toast.error("Upload failed.");
     } finally {
       setUploadingItem(null);
@@ -311,7 +311,7 @@ export default function AuditDetail() {
       }
       return next;
     });
-    toast.success("🗑️ Picture removed from item.");
+    toast.success("ðŸ—‘ï¸ Picture removed from item.");
   };
 
   const downloadPdf = () => {
@@ -337,7 +337,7 @@ export default function AuditDetail() {
               onClick={startEditing}
               className="h-9 sm:h-10 px-4 sm:px-5 bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] sm:text-xs tracking-[0.12em] uppercase inline-flex items-center gap-1.5 transition-colors shadow-sm"
             >
-              <PencilSimple weight="bold" size={16} /> ✏️ Admin Edit Mode
+              <PencilSimple weight="bold" size={16} /> âœï¸ Admin Edit Mode
             </button>
           )}
 
@@ -348,7 +348,7 @@ export default function AuditDetail() {
                 disabled={saving}
                 className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs tracking-wider uppercase inline-flex items-center gap-1.5 transition-colors shadow-md animate-pulse"
               >
-                <FloppyDisk weight="bold" size={17} /> {saving ? "Saving..." : "💾 Save Admin Modifications"}
+                <FloppyDisk weight="bold" size={17} /> {saving ? "Saving..." : "ðŸ’¾ Save Admin Modifications"}
               </button>
               <button
                 onClick={cancelEditing}
@@ -386,7 +386,7 @@ export default function AuditDetail() {
               <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-accent font-bold">OneUP Motors Inspection Report</span>
               {isEditing && (
                 <span className="bg-amber-100 text-amber-950 border border-amber-400 font-mono text-[9px] px-2 py-0.5 font-black uppercase tracking-wider">
-                  ✏️ ADMIN LIVE EDITING
+                  âœï¸ ADMIN LIVE EDITING
                 </span>
               )}
             </div>

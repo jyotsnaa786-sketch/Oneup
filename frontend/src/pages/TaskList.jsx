@@ -18,7 +18,7 @@ export default function TaskList() {
     if (newStatus === "closed") {
       const remark = (task.action_remark || "").trim();
       if (remark.length < 3) {
-        toast.error("⚠️ Mandatory Requirement: Please enter detailed Action Taken Remarks before marking this task as closed!");
+        toast.error("âš ï¸ Mandatory Requirement: Please enter detailed Action Taken Remarks before marking this task as closed!");
         return;
       }
     }
@@ -36,7 +36,7 @@ export default function TaskList() {
       await api.patch(`/tasks/${id}`, { owner });
       toast.success("Task owner assigned");
       setTasks(tasks.map(t => t.id === id ? { ...t, owner } : t));
-    } catch {}
+    } catch (e) {}
   };
 
   const updateDueDate = async (id, due_date) => {
@@ -44,7 +44,7 @@ export default function TaskList() {
       await api.patch(`/tasks/${id}`, { due_date });
       toast.success("Target completion date updated");
       setTasks(tasks.map(t => t.id === id ? { ...t, due_date } : t));
-    } catch { toast.error("Failed to update target completion date"); }
+    } catch (e) { toast.error("Failed to update target completion date"); }
   };
 
   const updateRemark = async (id, action_remark) => {
@@ -52,7 +52,7 @@ export default function TaskList() {
       await api.patch(`/tasks/${id}`, { action_remark });
       setTasks(tasks.map(t => t.id === id ? { ...t, action_remark } : t));
       toast.success("Action Taken Remarks recorded");
-    } catch { toast.error("Failed to record action remarks"); }
+    } catch (e) { toast.error("Failed to record action remarks"); }
   };
 
   const updateFollowUp = async (id, follow_up_date) => {
@@ -60,7 +60,7 @@ export default function TaskList() {
       await api.patch(`/tasks/${id}`, { follow_up_date });
       setTasks(tasks.map(t => t.id === id ? { ...t, follow_up_date } : t));
       toast.success("Next follow-up date scheduled");
-    } catch { toast.error("Failed to schedule follow-up date"); }
+    } catch (e) { toast.error("Failed to schedule follow-up date"); }
   };
 
   const isViewOnly = user?.role === "director";
@@ -111,15 +111,15 @@ export default function TaskList() {
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground font-mono mb-2">
                     <span className="bg-muted px-2 py-0.5 font-bold border border-border text-foreground">{task.item_id}</span>
-                    <span>•</span>
+                    <span>â€¢</span>
                     <Link to={`/audits/${task.audit_id}`} className="font-semibold text-primary hover:underline">
                       {task.dealership_name}
                     </Link>
-                    <span>•</span>
+                    <span>â€¢</span>
                     <span className="font-semibold text-foreground">{task.category_name}</span>
                   </div>
                   <h3 className="text-base font-bold text-foreground">{task.item_text}</h3>
-                  {task.note && <p className="text-xs text-destructive mt-1.5 font-mono bg-destructive/5 border border-destructive/20 p-2 inline-block">“{task.note}”</p>}
+                  {task.note && <p className="text-xs text-destructive mt-1.5 font-mono bg-destructive/5 border border-destructive/20 p-2 inline-block">â€œ{task.note}â€</p>}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 shrink-0 border-t md:border-t-0 pt-3 md:pt-0">
@@ -161,12 +161,12 @@ export default function TaskList() {
                     <span>Action Taken Remarks</span>
                     {task.status === "open" && (
                       <span className="text-destructive font-bold text-[10px] bg-destructive/10 px-1.5 py-0.5 border border-destructive/20">
-                        ⚠️ Mandatory for Closure
+                        âš ï¸ Mandatory for Closure
                       </span>
                     )}
                     {task.status === "closed" && (
                       <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 border border-emerald-600/30">
-                        ✅ Verified Remediation
+                        âœ… Verified Remediation
                       </span>
                     )}
                   </label>
