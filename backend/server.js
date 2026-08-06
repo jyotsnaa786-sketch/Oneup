@@ -486,7 +486,6 @@ app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
           });
         }
       });
-    }
 
     saveDB();
     res.json(doc);
