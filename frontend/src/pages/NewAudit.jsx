@@ -5,7 +5,7 @@ import PhotoAnnotator from "@/components/PhotoAnnotator";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { scoreColor } from "@/components/StatusBits";
-import { Check, X, MinusCircle, ArrowLeft, ArrowRight, FloppyDisk, ImageSquare, Lightning, Camera, FileImage, PaperPlaneRight, PaintBrush, Trash } from "@phosphor-icons/react";
+import { Check, X, MinusCircle, ArrowLeft, ArrowRight, FloppyDisk, ImageSquare, Lightning, Camera, FileImage, PaperPlaneRight, PaintBrush } from "@phosphor-icons/react";
 
 // Lightweight HTML5 Client-Side Photo Compression Helper (Scales 15MB Camera Shots to ~150KB in milliseconds)
 async function compressImageFile(file, maxWidth = 1200, quality = 0.8) {

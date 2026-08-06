@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ScoreBadge, scoreColor, ResultChip } from "@/components/StatusBits";
 import { toast } from "sonner";
-import { ArrowLeft, MapPin, User, CalendarBlank, NotePencil, Printer, FileXls, WarningCircle, Shield, PencilSimple, FloppyDisk, X, Camera, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, MapPin, User, CalendarBlank, NotePencil, Printer, FileXls, WarningCircle, Shield, PencilSimple, FloppyDisk, X, Camera } from "@phosphor-icons/react";
 
 async function compressImageFile(file, maxWidth = 1200, quality = 0.8) {
   return new Promise((resolve) => {
