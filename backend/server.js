@@ -506,6 +506,74 @@ app.get('/api/audits/:id', authMiddleware, (req, res) => {
   res.json(audit);
 });
 
+app.put('/api/audits/:id', authMiddleware, adminOnly, (req, res) => {
+  try {
+    const idx = (db.audits || []).findIndex(a => a.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ detail: "Audit report not found" });
+    const oldAudit = db.audits[idx];
+
+    const { dealership_name, location, auditor_name, audit_date, general_notes } = req.body;
+    const rawCat = req.body.categories || oldAudit.categories;
+    const categories = Array.isArray(rawCat) ? rawCat : Object.values(rawCat || {});
+    categories.forEach(cat => {
+      if (cat) cat.items = Array.isArray(cat.items) ? cat.items : Object.values(cat.items || {});
+    });
+    const { overall, catScores } = computeScores(categories);
+
+    oldAudit.dealership_name = dealership_name || oldAudit.dealership_name;
+    oldAudit.location = location !== undefined ? location : oldAudit.location;
+    oldAudit.auditor_name = auditor_name || oldAudit.auditor_name;
+    oldAudit.audit_date = audit_date || oldAudit.audit_date;
+    oldAudit.categories = categories;
+    oldAudit.general_notes = general_notes !== undefined ? general_notes : oldAudit.general_notes;
+    oldAudit.overall_score = overall;
+    oldAudit.category_scores = catScores;
+    oldAudit.status = statusFromScore(overall);
+    oldAudit.last_edited_by = req.user ? req.user.id : "admin";
+    oldAudit.last_edited_at = new Date().toISOString();
+
+    const oldTasks = (db.tasks || []).filter(t => t.audit_id === oldAudit.id);
+    db.tasks = (db.tasks || []).filter(t => t.audit_id !== oldAudit.id);
+
+    categories.forEach(cat => {
+      if (cat && Array.isArray(cat.items)) {
+        cat.items.forEach(it => {
+          if (it && it.result === "fail") {
+            const existingTask = oldTasks.find(t => t.item_id === it.item_id);
+            if (existingTask) {
+              existingTask.dealership_name = oldAudit.dealership_name;
+              existingTask.note = it.note !== undefined ? it.note : existingTask.note;
+              db.tasks.unshift(existingTask);
+            } else {
+              const due = new Date();
+              due.setDate(due.getDate() + 7);
+              db.tasks.unshift({
+                id: crypto.randomUUID(),
+                audit_id: oldAudit.id,
+                dealership_name: oldAudit.dealership_name,
+                category_name: cat.name || "",
+                item_id: it.item_id || "",
+                item_text: it.text || "",
+                note: it.note || "",
+                owner: "OneUP Service Manager",
+                due_date: due.toISOString().slice(0, 10),
+                status: "open",
+                created_at: new Date().toISOString()
+              });
+            }
+          }
+        });
+      }
+    });
+
+    saveDB();
+    res.json(oldAudit);
+  } catch (err) {
+    console.error("Error updating audit:", err);
+    res.status(500).json({ detail: "Failed to save administrative modifications: " + err.message });
+  }
+});
+
 app.delete('/api/audits/:id', authMiddleware, adminOnly, (req, res) => {
   const idx = db.audits.findIndex(a => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ detail: "Audit not found" });

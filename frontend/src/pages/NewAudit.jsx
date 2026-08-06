@@ -116,8 +116,49 @@ export default function NewAudit() {
   
   const [annotateItem, setAnnotateItem] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [draftInfo, setDraftInfo] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  useEffect(() => { api.get("/audit-template").then((r) => setTemplate(r.data)).catch(() => toast.error("Failed to load template")); }, []);
+  useEffect(() => {
+    api.get("/audit-template").then((r) => {
+      setTemplate(r.data);
+      const saved = localStorage.getItem("oneup_audit_draft");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.meta && parsed.timestamp) {
+            setDraftInfo(parsed);
+          }
+        } catch (e) {}
+      }
+      setIsInitialized(true);
+    }).catch(() => toast.error("Failed to load template"));
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized || !template || draftInfo) return;
+    const hasProgress = step > 0 || Object.keys(state).length > 0 || meta.dealership_name !== "OneUP Motors Nexa";
+    if (hasProgress) {
+      const payload = { meta, state, general, step, timestamp: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() };
+      localStorage.setItem("oneup_audit_draft", JSON.stringify(payload));
+    }
+  }, [meta, state, general, step, isInitialized, template, draftInfo]);
+
+  const restoreDraft = () => {
+    if (!draftInfo) return;
+    if (draftInfo.meta) setMeta(draftInfo.meta);
+    if (draftInfo.state) setState(draftInfo.state);
+    if (draftInfo.general) setGeneral(draftInfo.general);
+    if (typeof draftInfo.step === "number") setStep(draftInfo.step);
+    setDraftInfo(null);
+    toast.success("📝 Saved Inspection Draft Resumed successfully!");
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem("oneup_audit_draft");
+    setDraftInfo(null);
+    toast.info("🗑️ Old draft discarded. Starting clean survey.");
+  };
 
   if (!template) return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
 
@@ -222,6 +263,7 @@ export default function NewAudit() {
     setSaving(true);
     try {
       const { data } = await api.post("/audits", { ...meta, categories, general_notes: general });
+      localStorage.removeItem("oneup_audit_draft");
       toast.success("🎉 Audit record uploaded at " + data.overall_score + "% compliance!");
       navigate(`/audits/${data.id}`);
     } catch { toast.error("Failed to save audit record"); }
@@ -245,9 +287,42 @@ export default function NewAudit() {
 
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-5 animate-fade-up w-full max-w-full overflow-hidden">
         <div>
-          <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-accent mb-0.5">OneUP Mobile Field Protocol</div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-accent font-bold">OneUP Mobile Field Protocol</span>
+            <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-[9px] px-1.5 py-0.5 font-bold tracking-wider uppercase flex items-center gap-1">
+              <span>💾 AUTO-SAVING DRAFTS</span>
+            </span>
+          </div>
           <h1 className="font-display text-2xl sm:text-4xl font-black tracking-tight truncate">Run Inspection</h1>
         </div>
+
+        {draftInfo && (
+          <div className="w-full bg-amber-50 border-2 border-amber-500 p-4 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-wider text-amber-900 font-mono flex items-center gap-1.5">
+                <span>📝 UNFINISHED SURVEY DRAFT FOUND</span>
+                <span className="bg-amber-200 text-amber-950 text-[10px] px-2 py-0.5 rounded-none font-bold">Saved: {draftInfo.timestamp}</span>
+              </div>
+              <p className="text-xs text-amber-950 font-medium mt-1">
+                You left an incomplete field survey ({draftInfo.meta?.dealership_name || "Dealership"}). Would you like to continue right where you left off?
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              <button
+                onClick={restoreDraft}
+                className="flex-1 sm:flex-initial h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black tracking-wide uppercase transition-colors shadow-xs"
+              >
+                ▶ Resume Draft
+              </button>
+              <button
+                onClick={discardDraft}
+                className="flex-1 sm:flex-initial h-9 px-3 bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-bold uppercase transition-colors"
+              >
+                🗑️ Discard
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* RESPONSIVE MOBILE ACTION CONTROLS */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-3 border border-border w-full lg:w-auto shadow-xs">
