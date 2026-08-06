@@ -434,49 +434,60 @@ app.put('/api/audit-template', authMiddleware, adminOnly, (req, res) => {
 
 // --- Core Audit Routes ---
 app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
-  const { dealership_name, location, auditor_name, audit_date, categories, general_notes } = req.body;
-  const { overall, catScores } = computeScores(categories || []);
-  const auditId = crypto.randomUUID();
-  const doc = {
-    id: auditId,
-    dealership_name,
-    location,
-    auditor_name,
-    audit_date,
-    categories,
-    general_notes: general_notes || "",
-    overall_score: overall,
-    category_scores: catScores,
-    status: statusFromScore(overall),
-    created_by: req.user.id,
-    created_at: new Date().toISOString()
-  };
-  db.audits.unshift(doc);
+  try {
+    const { dealership_name, location, auditor_name, audit_date, categories, general_notes } = req.body;
+    const { overall, catScores } = computeScores(categories || []);
+    const auditId = crypto.randomUUID();
+    const doc = {
+      id: auditId,
+      dealership_name: dealership_name || "OneUP Motors",
+      location: location || "",
+      auditor_name: auditor_name || "Inspector",
+      audit_date: audit_date || new Date().toISOString().slice(0, 10),
+      categories: Array.isArray(categories) ? categories : [],
+      general_notes: general_notes || "",
+      overall_score: overall,
+      category_scores: catScores,
+      status: statusFromScore(overall),
+      created_by: req.user ? req.user.id : "unknown",
+      created_at: new Date().toISOString()
+    };
+    if (!Array.isArray(db.audits)) db.audits = [];
+    if (!Array.isArray(db.tasks)) db.tasks = [];
+    db.audits.unshift(doc);
 
-  (categories || []).forEach(cat => {
-    (cat.items || []).forEach(it => {
-      if (it.result === "fail") {
-        const due = new Date();
-        due.setDate(due.getDate() + 7);
-        db.tasks.unshift({
-          id: crypto.randomUUID(),
-          audit_id: auditId,
-          dealership_name,
-          category_name: cat.name,
-          item_id: it.item_id,
-          item_text: it.text,
-          note: it.note || "",
-          owner: "OneUP Service Manager",
-          due_date: due.toISOString().slice(0, 10),
-          status: "open",
-          created_at: new Date().toISOString()
-        });
-      }
-    });
-  });
+    if (Array.isArray(categories)) {
+      categories.forEach(cat => {
+        if (cat && Array.isArray(cat.items)) {
+          cat.items.forEach(it => {
+            if (it && it.result === "fail") {
+              const due = new Date();
+              due.setDate(due.getDate() + 7);
+              db.tasks.unshift({
+                id: crypto.randomUUID(),
+                audit_id: auditId,
+                dealership_name: dealership_name || "OneUP Motors",
+                category_name: cat.name || "",
+                item_id: it.item_id || "",
+                item_text: it.text || "",
+                note: it.note || "",
+                owner: "OneUP Service Manager",
+                due_date: due.toISOString().slice(0, 10),
+                status: "open",
+                created_at: new Date().toISOString()
+              });
+            }
+          });
+        }
+      });
+    }
 
-  saveDB();
-  res.json(doc);
+    saveDB();
+    res.json(doc);
+  } catch (err) {
+    console.error("Critical Exception in POST /api/audits:", err);
+    res.status(500).json({ detail: "Audit Submission Error: " + (err.message || String(err)), stack: err.stack });
+  }
 });
 
 app.get('/api/audits', authMiddleware, (req, res) => {
@@ -862,6 +873,17 @@ app.get('/api/system/cloud-status', (req, res) => {
     last_cloud_error: lastCloudError || "None (Operating Cleanly)",
     total_audits_in_memory: db.audits ? db.audits.length : 0,
     cloudinary_initialized: Boolean(cloudinary)
+  });
+});
+
+app.post('/api/system/reboot-cloud', async (req, res) => {
+  console.log("⚡ Manual cloud reconnection triggered over API!");
+  await initCloudDatabase();
+  await restoreAllCloudMediaToDisk();
+  res.json({
+    message: "Reboot sequence executed",
+    mongodb_connected: Boolean(cloudDbCollection),
+    last_cloud_error: lastCloudError || "None (Operating Cleanly)"
   });
 });
 
