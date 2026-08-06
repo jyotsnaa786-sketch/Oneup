@@ -252,25 +252,27 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
-function computeScores(categories) {
+function computeScores(rawCategories) {
+  const categories = Array.isArray(rawCategories) ? rawCategories : Object.values(rawCategories || {});
   let catScores = [];
   let totalPass = 0;
   let totalApplicable = 0;
-  for (const cat of (categories || [])) {
+  for (const cat of categories) {
+    const items = Array.isArray(cat ? cat.items : null) ? cat.items : Object.values((cat && cat.items) ? cat.items : {});
     let cPass = 0;
     let cApplicable = 0;
-    for (const item of (cat.items || [])) {
+    for (const item of items) {
       if (item.result === "pass") { cPass++; cApplicable++; }
       else if (item.result === "fail") { cApplicable++; }
     }
     const pct = cApplicable ? Math.round((cPass / cApplicable) * 1000) / 10 : 0.0;
     catScores.push({
-      category_id: cat.category_id,
-      name: cat.name,
+      category_id: cat.category_id || "",
+      name: cat.name || "",
       score: pct,
       passed: cPass,
       applicable: cApplicable,
-      total: (cat.items || []).length
+      total: items.length
     });
     totalPass += cPass;
     totalApplicable += cApplicable;
@@ -435,8 +437,13 @@ app.put('/api/audit-template', authMiddleware, adminOnly, (req, res) => {
 // --- Core Audit Routes ---
 app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
   try {
-    const { dealership_name, location, auditor_name, audit_date, categories, general_notes } = req.body;
-    const { overall, catScores } = computeScores(categories || []);
+    const { dealership_name, location, auditor_name, audit_date, general_notes } = req.body;
+    const rawCat = req.body.categories;
+    const categories = Array.isArray(rawCat) ? rawCat : Object.values(rawCat || {});
+    categories.forEach(cat => {
+      if (cat) cat.items = Array.isArray(cat.items) ? cat.items : Object.values(cat.items || {});
+    });
+    const { overall, catScores } = computeScores(categories);
     const auditId = crypto.randomUUID();
     const doc = {
       id: auditId,
@@ -444,7 +451,7 @@ app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
       location: location || "",
       auditor_name: auditor_name || "Inspector",
       audit_date: audit_date || new Date().toISOString().slice(0, 10),
-      categories: Array.isArray(categories) ? categories : [],
+      categories: categories,
       general_notes: general_notes || "",
       overall_score: overall,
       category_scores: catScores,
@@ -456,12 +463,11 @@ app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
     if (!Array.isArray(db.tasks)) db.tasks = [];
     db.audits.unshift(doc);
 
-    if (Array.isArray(categories)) {
-      categories.forEach(cat => {
-        if (cat && Array.isArray(cat.items)) {
-          cat.items.forEach(it => {
-            if (it && it.result === "fail") {
-              const due = new Date();
+    categories.forEach(cat => {
+      if (cat && Array.isArray(cat.items)) {
+        cat.items.forEach(it => {
+          if (it && it.result === "fail") {
+            const due = new Date();
               due.setDate(due.getDate() + 7);
               db.tasks.unshift({
                 id: crypto.randomUUID(),
