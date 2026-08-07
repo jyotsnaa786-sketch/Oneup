@@ -12,6 +12,7 @@ import NewAudit from "@/pages/NewAudit";
 import TemplateEditor from "@/pages/TemplateEditor";
 import TaskList from "@/pages/TaskList";
 import AdminPortal from "@/pages/AdminPortal";
+import Drafts from "@/pages/Drafts";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/tasks" element={<ProtectedRoute><TaskList /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPortal /></ProtectedRoute>} />
             <Route path="/template" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
+            <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
             <Route path="/audits/new" element={<ProtectedRoute><NewAudit /></ProtectedRoute>} />
             <Route path="/audits/:id" element={<ProtectedRoute><AuditDetail /></ProtectedRoute>} />
           </Routes>

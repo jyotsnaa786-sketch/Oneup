@@ -18,7 +18,7 @@ export default function TaskList() {
     if (newStatus === "closed") {
       const remark = (task.action_remark || "").trim();
       if (remark.length < 3) {
-        toast.error("âš ï¸ Mandatory Requirement: Please enter detailed Action Taken Remarks before marking this task as closed!");
+        toast.error("⚠️ Mandatory Requirement: Please enter detailed Action Taken Remarks before marking this task as closed!");
         return;
       }
     }
@@ -111,15 +111,15 @@ export default function TaskList() {
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground font-mono mb-2">
                     <span className="bg-muted px-2 py-0.5 font-bold border border-border text-foreground">{task.item_id}</span>
-                    <span>â€¢</span>
+                    <span>•</span>
                     <Link to={`/audits/${task.audit_id}`} className="font-semibold text-primary hover:underline">
                       {task.dealership_name}
                     </Link>
-                    <span>â€¢</span>
+                    <span>•</span>
                     <span className="font-semibold text-foreground">{task.category_name}</span>
                   </div>
                   <h3 className="text-base font-bold text-foreground">{task.item_text}</h3>
-                  {task.note && <p className="text-xs text-destructive mt-1.5 font-mono bg-destructive/5 border border-destructive/20 p-2 inline-block">â€œ{task.note}â€</p>}
+                  {task.note && <p className="text-xs text-destructive mt-1.5 font-mono bg-destructive/5 border border-destructive/20 p-2 inline-block">“{task.note}”</p>}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 shrink-0 border-t md:border-t-0 pt-3 md:pt-0">
@@ -161,12 +161,12 @@ export default function TaskList() {
                     <span>Action Taken Remarks</span>
                     {task.status === "open" && (
                       <span className="text-destructive font-bold text-[10px] bg-destructive/10 px-1.5 py-0.5 border border-destructive/20">
-                        âš ï¸ Mandatory for Closure
+                        ⚠️ Mandatory for Closure
                       </span>
                     )}
                     {task.status === "closed" && (
                       <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 border border-emerald-600/30">
-                        âœ… Verified Remediation
+                        ✅ Verified Remediation
                       </span>
                     )}
                   </label>

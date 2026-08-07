@@ -2,7 +2,7 @@ import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import InstallPrompt from "@/components/InstallPrompt";
-import { Gauge, ClipboardText, PlusCircle, SignOut, Wrench, WarningCircle, Sliders, Shield } from "@phosphor-icons/react";
+import { Gauge, ClipboardText, PlusCircle, SignOut, Wrench, WarningCircle, Sliders, Shield, FileDashed } from "@phosphor-icons/react";
 
 export default function AppShell({ children }) {
   const { user, logout } = useAuth();
@@ -22,6 +22,7 @@ export default function AppShell({ children }) {
     { to: "/", label: "Dashboard", short: "Home", icon: Gauge, testid: "nav-dashboard", allow: true },
     { to: "/audits", label: "Audits Archive", short: "Archive", icon: ClipboardText, testid: "nav-audits", allow: true },
     { to: "/tasks", label: "Action Tracker", short: "Tasks", icon: WarningCircle, testid: "nav-tasks", allow: true },
+    { to: "/drafts", label: "Saved Drafts", short: "Drafts", icon: FileDashed, testid: "nav-drafts", allow: !isDirector },
     { to: "/admin", label: "Admin Portal", short: "Admin", icon: Shield, testid: "nav-admin", allow: canViewAdminPortal },
     { to: "/template", label: "Template Editor", short: "Template", icon: Sliders, testid: "nav-template", allow: isAdmin },
     { to: "/audits/new", label: "Run New Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: !isDirector, isAction: true },
@@ -31,6 +32,7 @@ export default function AppShell({ children }) {
   const mobileItems = [
     { to: "/", label: "Home", icon: Gauge },
     { to: "/audits", label: "Archive", icon: ClipboardText },
+    { to: "/drafts", label: "Drafts", icon: FileDashed },
     { to: "/audits/new", label: "Run Audit", icon: PlusCircle, highlight: true },
     { to: "/tasks", label: "Tasks", icon: WarningCircle },
     { to: canViewAdminPortal ? "/admin" : "/login", label: canViewAdminPortal ? "Admin" : "Profile", icon: canViewAdminPortal ? Shield : SignOut, isLogout: !canViewAdminPortal },

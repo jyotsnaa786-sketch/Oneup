@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api, getHostBase } from "@/lib/apiClient";
 import AppShell from "@/components/AppShell";
 import PhotoAnnotator from "@/components/PhotoAnnotator";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { scoreColor } from "@/components/StatusBits";
 import { Check, X, MinusCircle, ArrowLeft, ArrowRight, FloppyDisk, ImageSquare, Lightning, Camera, FileImage, PaperPlaneRight, PaintBrush, Trash } from "@phosphor-icons/react";
@@ -67,21 +67,21 @@ function EvidencePreview({ path, onRemove }) {
       <div className="w-full h-24 bg-muted overflow-hidden border border-border/40 flex items-center justify-center">
         {isPdf ? (
           <div className="w-full h-full bg-red-50/80 flex flex-col items-center justify-center text-red-700 font-bold p-1.5 border border-red-200 gap-1 text-center">
-            <span className="text-2xl">ðŸ“„</span>
+            <span className="text-2xl">📄</span>
             <span className="text-[9px] font-mono tracking-wider uppercase font-black">PDF DOC</span>
           </div>
         ) : url ? (
           <img src={url} alt="evidence" className="w-full h-full object-cover hover:scale-105 transition-transform" />
         ) : (
-          <div className="w-full h-full animate-pulse bg-muted/80 flex items-center justify-center text-[10px] text-muted-foreground font-mono">Loadingâ€¦</div>
+          <div className="w-full h-full animate-pulse bg-muted/80 flex items-center justify-center text-[10px] text-muted-foreground font-mono">Loading…</div>
         )}
       </div>
       <div className="flex items-center justify-between gap-1 border-t border-border pt-1.5">
         <a href={viewLink} target="_blank" rel="noreferrer" className="text-[10px] font-extrabold uppercase tracking-wider text-primary hover:underline flex-1 text-center font-mono">
-          VIEW ðŸ‘ï¸
+          VIEW 👁️
         </a>
         <button type="button" onClick={() => onRemove(path)} className="text-[11px] font-black text-destructive hover:text-red-800 px-1 transition-colors" title="Remove attachment">
-          ðŸ—‘ï¸
+          🗑️
         </button>
       </div>
     </div>
@@ -106,6 +106,7 @@ function computeScore(state, template) {
 
 export default function NewAudit() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [template, setTemplate] = useState(null);
   const [meta, setMeta] = useState({ dealership_name: "OneUP Motors Nexa", location: "Jaipur, Rajasthan", auditor_name: "OneUP Field Inspector", audit_date: new Date().toISOString().slice(0, 10) });
   const [state, setState] = useState({});
@@ -132,6 +133,16 @@ export default function NewAudit() {
         } catch (e) {}
       }
       setIsInitialized(true);
+      if (location.state && location.state.resumeDraft && saved) {
+        setTimeout(() => {
+          const parsed = JSON.parse(saved);
+          if (parsed.meta) setMeta(parsed.meta);
+          if (parsed.state) setState(parsed.state);
+          if (parsed.general) setGeneral(parsed.general);
+          if (typeof parsed.step === 'number') setStep(parsed.step);
+          toast.success('📝 Draft Resumed successfully!');
+        }, 100);
+      }
     }).catch(() => toast.error("Failed to load template"));
   }, []);
 
@@ -151,13 +162,13 @@ export default function NewAudit() {
     if (draftInfo.general) setGeneral(draftInfo.general);
     if (typeof draftInfo.step === "number") setStep(draftInfo.step);
     setDraftInfo(null);
-    toast.success("ðŸ“ Saved Inspection Draft Resumed successfully!");
+    toast.success("📝 Saved Inspection Draft Resumed successfully!");
   };
 
   const discardDraft = () => {
     localStorage.removeItem("oneup_audit_draft");
     setDraftInfo(null);
-    toast.info("ðŸ—‘ï¸ Old draft discarded. Starting clean survey.");
+    toast.info("🗑️ Old draft discarded. Starting clean survey.");
   };
 
   if (!template) return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
@@ -179,7 +190,7 @@ export default function NewAudit() {
       });
     });
     setState(nextState);
-    toast.success("âš¡ 100% Score Set! All check items graded PASS!");
+    toast.success("⚡ 100% Score Set! All check items graded PASS!");
   };
 
   const onSelectPhoto = async (id, file, openStudio = false) => {
@@ -204,7 +215,7 @@ export default function NewAudit() {
           evidence: [...(s[id]?.evidence || []), data.path]
         }
       }));
-      toast.success(isPdf ? "ðŸ“„ PDF Document attached & verified!" : "ðŸ“¸ Photo compressed & attached instantly!");
+      toast.success(isPdf ? "📄 PDF Document attached & verified!" : "📸 Photo compressed & attached instantly!");
     } catch (e) {
       toast.error("Upload failed. Please verify Wi-Fi or mobile network connection.");
     } finally {
@@ -220,7 +231,7 @@ export default function NewAudit() {
         evidence: (s[id]?.evidence || []).filter(p => p !== photoPath)
       }
     }));
-    toast.success("ðŸ—‘ï¸ Attachment removed");
+    toast.success("🗑️ Attachment removed");
   };
 
   const executeUpload = async (id, file, caption) => {
@@ -244,7 +255,7 @@ export default function NewAudit() {
           }
         };
       });
-      toast.success("ðŸŽ¨ Annotated photo saved & attached!");
+      toast.success("🎨 Annotated photo saved & attached!");
     } catch (e) { toast.error("Upload failed. Check mobile connection."); }
     finally { setUploading(null); }
   };
@@ -264,7 +275,7 @@ export default function NewAudit() {
     try {
       const { data } = await api.post("/audits", { ...meta, categories, general_notes: general });
       localStorage.removeItem("oneup_audit_draft");
-      toast.success("ðŸŽ‰ Audit record uploaded at " + data.overall_score + "% compliance!");
+      toast.success("🎉 Audit record uploaded at " + data.overall_score + "% compliance!");
       navigate(`/audits/${data.id}`);
     } catch (e) { toast.error("Failed to save audit record"); }
     finally { setSaving(false); }
@@ -290,39 +301,13 @@ export default function NewAudit() {
           <div className="flex items-center gap-2 mb-0.5">
             <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-accent font-bold">OneUP Mobile Field Protocol</span>
             <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-[9px] px-1.5 py-0.5 font-bold tracking-wider uppercase flex items-center gap-1">
-              <span>ðŸ’¾ AUTO-SAVING DRAFTS</span>
+              <span>💾 AUTO-SAVING DRAFTS</span>
             </span>
           </div>
           <h1 className="font-display text-2xl sm:text-4xl font-black tracking-tight truncate">Run Inspection</h1>
         </div>
 
-        {draftInfo && (
-          <div className="w-full bg-amber-50 border-2 border-amber-500 p-4 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-            <div>
-              <div className="text-xs font-black uppercase tracking-wider text-amber-900 font-mono flex items-center gap-1.5">
-                <span>ðŸ“ UNFINISHED SURVEY DRAFT FOUND</span>
-                <span className="bg-amber-200 text-amber-950 text-[10px] px-2 py-0.5 rounded-none font-bold">Saved: {draftInfo.timestamp}</span>
-              </div>
-              <p className="text-xs text-amber-950 font-medium mt-1">
-                You left an incomplete field survey ({draftInfo.meta?.dealership_name || "Dealership"}). Would you like to continue right where you left off?
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-              <button
-                onClick={restoreDraft}
-                className="flex-1 sm:flex-initial h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black tracking-wide uppercase transition-colors shadow-xs"
-              >
-                â–¶ Resume Draft
-              </button>
-              <button
-                onClick={discardDraft}
-                className="flex-1 sm:flex-initial h-9 px-3 bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-bold uppercase transition-colors"
-              >
-                ðŸ—‘ï¸ Discard
-              </button>
-            </div>
-          </div>
-        )}
+        
         
         {/* RESPONSIVE MOBILE ACTION CONTROLS */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-3 border border-border w-full lg:w-auto shadow-xs">
@@ -428,14 +413,14 @@ export default function NewAudit() {
                     data-testid={`note-${item.item_id}`}
                     value={cur.note || ""}
                     onChange={(e) => setNote(item.item_id, e.target.value)}
-                    placeholder="Observation noteâ€¦"
+                    placeholder="Observation note…"
                     className="w-full sm:flex-1 h-10 px-3 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full sm:w-auto shrink-0">
                     <label className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-accent/15 border border-accent text-foreground cursor-pointer text-[11px] sm:text-xs font-black tracking-wider uppercase hover:bg-accent hover:text-white transition-all active:scale-95 ${uploading === item.item_id ? "opacity-70 pointer-events-none bg-accent text-white" : ""}`} title="Instant camera photo shot">
                       <Camera size={16} className="text-accent shrink-0" weight="bold" />
-                      <span>{uploading === item.item_id ? "Savingâ€¦" : "ðŸ“¸ Camera"}</span>
+                      <span>{uploading === item.item_id ? "Saving…" : "📸 Camera"}</span>
                       <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
                     </label>
 
@@ -446,14 +431,14 @@ export default function NewAudit() {
                     </label>
 
                     <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-red-50 border border-red-400/60 text-red-700 cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-red-700 hover:text-white transition-all active:scale-95" title="Attach PDF document report or invoice">
-                      <span className="text-sm">ðŸ“„</span>
+                      <span className="text-sm">📄</span>
                       <span>PDF Doc</span>
                       <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
                     </label>
 
                     <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-primary/10 border border-primary/50 text-primary cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-primary hover:text-white transition-all active:scale-95" title="Draw arrows & annotate photo">
                       <PaintBrush size={16} className="shrink-0" weight="bold" />
-                      <span>ðŸŽ¨ Draw</span>
+                      <span>🎨 Draw</span>
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], true)} />
                     </label>
                   </div>
@@ -504,7 +489,7 @@ export default function NewAudit() {
             value={general}
             onChange={(e) => setGeneral(e.target.value)}
             rows={3}
-            placeholder="Final summary observationsâ€¦"
+            placeholder="Final summary observations…"
             className="mt-1 w-full p-2.5 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -527,7 +512,7 @@ export default function NewAudit() {
             data-testid="submit-audit-button"
             className="flex-1 sm:flex-initial h-12 px-6 bg-primary text-white font-black text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-60 shadow-xl active:scale-95"
           >
-            <FloppyDisk weight="bold" size={18} /> {saving ? "Uploadingâ€¦" : "Submit Inspection"}
+            <FloppyDisk weight="bold" size={18} /> {saving ? "Uploading…" : "Submit Inspection"}
           </button>
         ) : (
           <div className="flex items-center gap-2 shrink-0">
