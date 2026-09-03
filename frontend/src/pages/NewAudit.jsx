@@ -47,20 +47,8 @@ async function compressImageFile(file, maxWidth = 1200, quality = 0.8) {
 
 function EvidencePreview({ path, onRemove }) {
   const isCloudUrl = path && (path.startsWith("http://") || path.startsWith("https://"));
-  const [url, setUrl] = useState(isCloudUrl ? path : null);
   const isPdf = path && path.toLowerCase().endsWith(".pdf");
-
-  useEffect(() => {
-    let revoked;
-    if (!isPdf && !isCloudUrl && path) {
-      api.get(`/files/${path}`, { responseType: "blob" })
-        .then((r) => { const u = URL.createObjectURL(r.data); revoked = u; setUrl(u); })
-        .catch(() => {});
-    }
-    return () => revoked && URL.revokeObjectURL(revoked);
-  }, [path, isPdf, isCloudUrl]);
-
-  const viewLink = isCloudUrl ? path : (url || `${getHostBase()}/api/files/${path}`);
+  const imgSrc = isCloudUrl ? path : `${getHostBase()}/api/files/${path}`;
 
   return (
     <div className="relative border border-border bg-white p-2 shadow-xs flex flex-col gap-2 w-28 shrink-0">
@@ -70,14 +58,12 @@ function EvidencePreview({ path, onRemove }) {
             <span className="text-2xl">📄</span>
             <span className="text-[9px] font-mono tracking-wider uppercase font-black">PDF DOC</span>
           </div>
-        ) : url ? (
-          <img src={url} alt="evidence" className="w-full h-full object-cover hover:scale-105 transition-transform" />
         ) : (
-          <div className="w-full h-full animate-pulse bg-muted/80 flex items-center justify-center text-[10px] text-muted-foreground font-mono">Loading…</div>
+          <img src={imgSrc} alt="evidence" className="w-full h-full object-cover hover:scale-105 transition-transform" />
         )}
       </div>
       <div className="flex items-center justify-between gap-1 border-t border-border pt-1.5">
-        <a href={viewLink} target="_blank" rel="noreferrer" className="text-[10px] font-extrabold uppercase tracking-wider text-primary hover:underline flex-1 text-center font-mono">
+        <a href={imgSrc} target="_blank" rel="noreferrer" className="text-[10px] font-extrabold uppercase tracking-wider text-primary hover:underline flex-1 text-center font-mono">
           VIEW 👁️
         </a>
         <button type="button" onClick={() => onRemove(path)} className="text-[11px] font-black text-destructive hover:text-red-800 px-1 transition-colors" title="Remove attachment">
@@ -114,7 +100,7 @@ export default function NewAudit() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(null);
-  
+
   const [annotateItem, setAnnotateItem] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [draftInfo, setDraftInfo] = useState(null);
@@ -123,51 +109,77 @@ export default function NewAudit() {
   useEffect(() => {
     api.get("/audit-template").then((r) => {
       setTemplate(r.data);
+      let targetDraft = null;
+
+      // 1. Try local storage draft
       const saved = localStorage.getItem("oneup_audit_draft");
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.meta && parsed.timestamp) {
-            setDraftInfo(parsed);
+          if (parsed && parsed.meta && parsed.state && Object.keys(parsed.state).length > 0) {
+            targetDraft = parsed;
           }
         } catch (e) {}
       }
+
+      // 2. Fetch server-side drafts to ensure server draft is loaded if available
+      api.get("/drafts").then((dr) => {
+        let activeDraft = targetDraft;
+        if (Array.isArray(dr.data) && dr.data.length > 0) {
+          const serverDraft = dr.data[0];
+          if (serverDraft && serverDraft.state && Object.keys(serverDraft.state).length > 0) {
+            activeDraft = serverDraft;
+          }
+        }
+
+        if (activeDraft) {
+          setDraftInfo(activeDraft);
+          if (activeDraft.meta) setMeta(activeDraft.meta);
+          if (activeDraft.state) setState(activeDraft.state);
+          if (activeDraft.general) setGeneral(activeDraft.general);
+          setStep(1); // Jump to Section 1 so check items and evidence photos are immediately visible!
+          toast.success("📝 Active Draft Auto-Restored! 6 Evidence Photos loaded onto screen.");
+        }
+      }).catch(() => {
+        if (targetDraft) {
+          setDraftInfo(targetDraft);
+          if (targetDraft.meta) setMeta(targetDraft.meta);
+          if (targetDraft.state) setState(targetDraft.state);
+          if (targetDraft.general) setGeneral(targetDraft.general);
+          setStep(1);
+          toast.success("📝 Local Draft Loaded into form!");
+        }
+      });
+
       setIsInitialized(true);
-      if (location.state && location.state.resumeDraft && saved) {
-        setTimeout(() => {
-          const parsed = JSON.parse(saved);
-          if (parsed.meta) setMeta(parsed.meta);
-          if (parsed.state) setState(parsed.state);
-          if (parsed.general) setGeneral(parsed.general);
-          if (typeof parsed.step === 'number') setStep(parsed.step);
-          toast.success('📝 Draft Resumed successfully!');
-        }, 100);
-      }
     }).catch(() => toast.error("Failed to load template"));
   }, []);
 
   useEffect(() => {
-    if (!isInitialized || !template || draftInfo) return;
+    if (!isInitialized || !template) return;
     const hasProgress = step > 0 || Object.keys(state).length > 0 || meta.dealership_name !== "OneUP Motors Nexa";
     if (hasProgress) {
       const payload = { meta, state, general, step, timestamp: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() };
       localStorage.setItem("oneup_audit_draft", JSON.stringify(payload));
+      api.post("/drafts", payload).catch(() => {});
     }
-  }, [meta, state, general, step, isInitialized, template, draftInfo]);
+  }, [meta, state, general, step, isInitialized, template]);
 
   const restoreDraft = () => {
     if (!draftInfo) return;
     if (draftInfo.meta) setMeta(draftInfo.meta);
     if (draftInfo.state) setState(draftInfo.state);
     if (draftInfo.general) setGeneral(draftInfo.general);
-    if (typeof draftInfo.step === "number") setStep(draftInfo.step);
-    setDraftInfo(null);
-    toast.success("📝 Saved Inspection Draft Resumed successfully!");
+    setStep(1);
+    toast.success("📝 Inspection Draft Restored successfully!");
   };
 
   const discardDraft = () => {
     localStorage.removeItem("oneup_audit_draft");
+    api.delete("/drafts").catch(() => {});
     setDraftInfo(null);
+    setState({});
+    setStep(0);
     toast.info("🗑️ Old draft discarded. Starting clean survey.");
   };
 
@@ -176,7 +188,7 @@ export default function NewAudit() {
   const totalSteps = template.length + 2;
   const setResult = (id, text, result) => setState((s) => ({ ...s, [id]: { ...(s[id] || { note: "", evidence: [] }), text, result } }));
   const setNote = (id, note) => setState((s) => ({ ...s, [id]: { ...(s[id] || { evidence: [] }), note } }));
-  
+
   const setAllToPass = () => {
     const nextState = { ...state };
     template.forEach(cat => {
@@ -275,10 +287,23 @@ export default function NewAudit() {
     try {
       const { data } = await api.post("/audits", { ...meta, categories, general_notes: general });
       localStorage.removeItem("oneup_audit_draft");
+      api.delete("/drafts").catch(() => {});
       toast.success("🎉 Audit record uploaded at " + data.overall_score + "% compliance!");
       navigate(`/audits/${data.id}`);
     } catch (e) { toast.error("Failed to save audit record"); }
     finally { setSaving(false); }
+  };
+
+  const handlePrevStep = () => {
+    if (step > 0) {
+      setStep((s) => s - 1);
+    } else {
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate("/audits");
+      }
+    }
   };
 
   const liveScore = computeScore(state, template);
@@ -288,250 +313,257 @@ export default function NewAudit() {
 
   return (
     <AppShell>
-      {annotateItem && selectedFile && (
-        <PhotoAnnotator
-          file={selectedFile}
-          onClose={() => { setAnnotateItem(null); setSelectedFile(null); }}
-          onSave={(annotatedFile, caption) => executeUpload(annotateItem, annotatedFile, caption)}
-        />
-      )}
+            {annotateItem && selectedFile && (
+              <PhotoAnnotator
+                file={selectedFile}
+                onClose={() => { setAnnotateItem(null); setSelectedFile(null); }}
+                onSave={(annotatedFile, caption) => executeUpload(annotateItem, annotatedFile, caption)}
+              />
+            )}
 
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-5 animate-fade-up w-full max-w-full overflow-hidden">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-accent font-bold">OneUP Mobile Field Protocol</span>
-            <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-[9px] px-1.5 py-0.5 font-bold tracking-wider uppercase flex items-center gap-1">
-              <span>💾 AUTO-SAVING DRAFTS</span>
-            </span>
-          </div>
-          <h1 className="font-display text-2xl sm:text-4xl font-black tracking-tight truncate">Run Inspection</h1>
-        </div>
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-5 animate-fade-up w-full max-w-full overflow-hidden">
+              <div>
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  data-testid="top-back-btn"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors mb-2"
+                >
+                  <ArrowLeft size={14} weight="bold" /> Back
+                </button>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-accent font-bold">OneUP Mobile Field Protocol</span>
+                  <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 font-mono text-[9px] px-1.5 py-0.5 font-bold tracking-wider uppercase flex items-center gap-1">
+                    <span>💾 AUTO-SAVING DRAFTS</span>
+                  </span>
+                </div>
+                <h1 className="font-display text-2xl sm:text-4xl font-black tracking-tight truncate">Run Inspection</h1>
+              </div>
 
-        
-        
-        {/* RESPONSIVE MOBILE ACTION CONTROLS */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-3 border border-border w-full lg:w-auto shadow-xs">
-          <div className="flex flex-wrap items-center gap-2 flex-1 sm:flex-initial">
-            <button
-              onClick={setAllToPass}
-              data-testid="fast-pass-all-btn"
-              className="h-10 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] sm:text-xs tracking-wider uppercase flex items-center justify-center gap-1 transition-colors shadow-xs active:scale-95 flex-1 sm:flex-initial"
-            >
-              <Lightning weight="fill" size={15} /> 100% Pass All
-            </button>
-            <button
-              onClick={() => setStep(totalSteps - 1)}
-              className="h-10 px-3.5 bg-primary hover:bg-blue-800 text-white font-black text-[11px] sm:text-xs tracking-wider uppercase flex items-center justify-center gap-1 transition-colors shadow-xs active:scale-95 flex-1 sm:flex-initial"
-              title="Jump to Review & Submit"
-            >
-              <PaperPlaneRight weight="bold" size={15} /> Review &amp; Submit
-            </button>
-          </div>
-          
-          <div className="text-right pl-3 border-l border-border shrink-0">
-            <div className="text-[9px] tracking-widest uppercase font-bold text-muted-foreground">Live Score</div>
-            <div className={`font-display text-2xl font-black ${scoreColor(liveScore)}`}>{liveScore}%</div>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-1 mb-5 overflow-x-auto py-1 w-full max-w-full no-scrollbar" data-testid="audit-stepper">
-        {["Header", ...template.map((c) => c.name.split(" ")[0].substring(0, 8)), "Review"].map((label, i) => (
-          <button
-            key={i}
-            onClick={() => setStep(i)}
-            className={`flex-1 min-w-[22px] sm:min-w-[28px] h-2 sm:h-2.5 transition-all shrink-0 ${i <= step ? "bg-primary" : "bg-border/60 hover:bg-border"}`}
-            title={label}
-          />
-        ))}
-      </div>
 
-      {isMeta && (
-        <div className="border border-border bg-white p-4 sm:p-8 animate-fade-up w-full max-w-full overflow-hidden" data-testid="audit-meta-form">
-          <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight mb-4">Dealership &amp; Auditor Header</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { k: "dealership_name", label: "Dealership Name", ph: "e.g. OneUP Motors Nexa" },
-              { k: "location", label: "Branch Location", ph: "e.g. Jaipur, Rajasthan" },
-              { k: "auditor_name", label: "Field Inspector Name", ph: "Your full name" },
-              { k: "audit_date", label: "Inspection Date", type: "date" },
-            ].map((f) => (
-              <div key={f.k} className="w-full max-w-full">
-                <label className="text-[11px] tracking-[0.12em] uppercase font-bold text-muted-foreground block">{f.label}</label>
-                <input
-                  data-testid={`meta-${f.k}`}
-                  type={f.type || "text"}
-                  value={meta[f.k]}
-                  placeholder={f.ph}
-                  onChange={(e) => setMeta((m) => ({ ...m, [f.k]: e.target.value }))}
-                  className="mt-1 w-full max-w-full h-11 px-3 border border-input bg-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm sm:text-base"
+              {/* RESPONSIVE MOBILE ACTION CONTROLS */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-3 border border-border w-full lg:w-auto shadow-xs">
+                <div className="flex flex-wrap items-center gap-2 flex-1 sm:flex-initial">
+                  <button
+                    onClick={setAllToPass}
+                    data-testid="fast-pass-all-btn"
+                    className="h-10 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] sm:text-xs tracking-wider uppercase flex items-center justify-center gap-1 transition-colors shadow-xs active:scale-95 flex-1 sm:flex-initial"
+                  >
+                    <Lightning weight="fill" size={15} /> 100% Pass All
+                  </button>
+                  <button
+                    onClick={() => setStep(totalSteps - 1)}
+                    className="h-10 px-3.5 bg-primary hover:bg-blue-800 text-white font-black text-[11px] sm:text-xs tracking-wider uppercase flex items-center justify-center gap-1 transition-colors shadow-xs active:scale-95 flex-1 sm:flex-initial"
+                    title="Jump to Review & Submit"
+                  >
+                    <PaperPlaneRight weight="bold" size={15} /> Review &amp; Submit
+                  </button>
+                </div>
+
+                <div className="text-right pl-3 border-l border-border shrink-0">
+                  <div className="text-[9px] tracking-widest uppercase font-bold text-muted-foreground">Live Score</div>
+                  <div className={`font-display text-2xl font-black ${scoreColor(liveScore)}`}>{liveScore}%</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 mb-5 overflow-x-auto py-1 w-full max-w-full no-scrollbar" data-testid="audit-stepper">
+              {["Header", ...template.map((c) => c.name.split(" ")[0].substring(0, 8)), "Review"].map((label, i) => (
+                <button
+                  key={i}
+                  onClick={() => setStep(i)}
+                  className={`flex-1 min-w-[22px] sm:min-w-[28px] h-2 sm:h-2.5 transition-all shrink-0 ${i <= step ? "bg-primary" : "bg-border/60 hover:bg-border"}`}
+                  title={label}
+                />
+              ))}
+            </div>
+
+            {isMeta && (
+              <div className="border border-border bg-white p-4 sm:p-8 animate-fade-up w-full max-w-full overflow-hidden" data-testid="audit-meta-form">
+                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight mb-4">Dealership &amp; Auditor Header</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { k: "dealership_name", label: "Dealership Name", ph: "e.g. OneUP Motors Nexa" },
+                    { k: "location", label: "Branch Location", ph: "e.g. Jaipur, Rajasthan" },
+                    { k: "auditor_name", label: "Field Inspector Name", ph: "Your full name" },
+                    { k: "audit_date", label: "Inspection Date", type: "date" },
+                  ].map((f) => (
+                    <div key={f.k} className="w-full max-w-full">
+                      <label className="text-[11px] tracking-[0.12em] uppercase font-bold text-muted-foreground block">{f.label}</label>
+                      <input
+                        data-testid={`meta-${f.k}`}
+                        type={f.type || "text"}
+                        value={meta[f.k]}
+                        placeholder={f.ph}
+                        onChange={(e) => setMeta((m) => ({ ...m, [f.k]: e.target.value }))}
+                        className="mt-1 w-full max-w-full h-11 px-3 border border-input bg-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm sm:text-base"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {cat && (
+              <div className="border border-border bg-white animate-fade-up w-full max-w-full overflow-hidden" data-testid={`category-${cat.category_id}`}>
+                <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-border bg-muted/30 gap-2 w-full">
+                  <div className="truncate pr-2">
+                    <span className="font-mono text-[9px] tracking-widest uppercase text-accent font-bold block">Pillar #{step} of 20</span>
+                    <h3 className="font-display text-base sm:text-xl font-bold tracking-tight truncate">{cat.name}</h3>
+                  </div>
+                  <span className="font-mono text-[11px] sm:text-xs text-muted-foreground font-bold bg-white px-2 py-1 border border-border shrink-0">{(cat.items || []).length} Items</span>
+                </div>
+
+                {(cat.items || []).map((item, i) => {
+                  const cur = state[item.item_id] || {};
+                  return (
+                    <div key={item.item_id} className={`p-3 sm:px-6 sm:py-5 border-b border-border/60 w-full max-w-full overflow-hidden ${i % 2 ? "bg-muted/10" : ""}`}>
+                      <div className="flex flex-col gap-2.5 w-full">
+                        <p className="text-xs sm:text-base font-medium leading-normal text-foreground break-words w-full">{item.text}</p>
+
+                        {/* Thumb-Friendly Mobile 3-Button Row */}
+                        <div className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-2 w-full max-w-md">
+                          {RESULTS.map((r) => {
+                            const Icon = r.icon;
+                            const on = cur.result === r.key;
+                            return (
+                              <button
+                                key={r.key}
+                                data-testid={`result-${item.item_id}-${r.key}`}
+                                onClick={() => setResult(item.item_id, item.text, r.key)}
+                                className={`flex items-center justify-center gap-1 h-10 sm:h-9 px-2 border text-[11px] sm:text-xs font-black tracking-wider uppercase transition-all ${on ? r.active : "border-border bg-white text-muted-foreground hover:border-foreground"}`}
+                              >
+                                <Icon weight="bold" size={14} /> {r.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2.5 mt-3.5 pt-3 border-t border-border/40 w-full">
+                        <input
+                          data-testid={`note-${item.item_id}`}
+                          value={cur.note || ""}
+                          onChange={(e) => setNote(item.item_id, e.target.value)}
+                          placeholder="Observation note…"
+                          className="w-full sm:flex-1 h-10 px-3 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full sm:w-auto shrink-0">
+                          <label className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-accent/15 border border-accent text-foreground cursor-pointer text-[11px] sm:text-xs font-black tracking-wider uppercase hover:bg-accent hover:text-white transition-all active:scale-95 ${uploading === item.item_id ? "opacity-70 pointer-events-none bg-accent text-white" : ""}`} title="Instant camera photo shot">
+                            <Camera size={16} className="text-accent shrink-0" weight="bold" />
+                            <span>{uploading === item.item_id ? "Saving…" : "📸 Camera"}</span>
+                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
+                          </label>
+
+                          <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 border border-border cursor-pointer text-[11px] sm:text-xs font-extrabold uppercase hover:bg-foreground hover:text-white transition-all active:scale-95" title="Pick photo from gallery">
+                            <FileImage size={16} className="text-muted-foreground shrink-0" />
+                            <span>Gallery</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
+                          </label>
+
+                          <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-red-50 border border-red-400/60 text-red-700 cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-red-700 hover:text-white transition-all active:scale-95" title="Attach PDF document report or invoice">
+                            <span className="text-sm">📄</span>
+                            <span>PDF Doc</span>
+                            <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
+                          </label>
+
+                          <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-primary/10 border border-primary/50 text-primary cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-primary hover:text-white transition-all active:scale-95" title="Draw arrows & annotate photo">
+                            <PaintBrush size={16} className="shrink-0" weight="bold" />
+                            <span>🎨 Draw</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], true)} />
+                          </label>
+                        </div>
+                      </div>
+
+                      {cur.evidence?.length > 0 && (
+                        <div className="mt-3 p-3 bg-muted/15 border border-border/80 w-full">
+                          <div className="flex items-center justify-between text-xs text-emerald-800 font-extrabold font-mono mb-2">
+                            <span className="flex items-center gap-1.5">
+                              <ImageSquare size={16} weight="bold" className="text-emerald-700" />
+                              {cur.evidence.length} File Attachment(s) Linked &amp; Verified
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-sans uppercase font-bold">Ready for Report Archives</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 overflow-x-auto py-1">
+                            {cur.evidence.map((path) => (
+                              <EvidencePreview key={path} path={path} onRemove={(p) => removePhoto(item.item_id, p)} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {isReview && (
+              <div className="border border-border bg-white p-4 sm:p-8 animate-fade-up w-full max-w-full overflow-hidden" data-testid="audit-review">
+                <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight mb-1">Final Review &amp; Upload</h3>
+                <p className="text-xs text-muted-foreground mb-4">Computed overall compliance score: <span className={`font-display font-black text-lg sm:text-xl ${scoreColor(liveScore)}`}>{liveScore}%</span></p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 max-h-64 overflow-y-auto p-2 border border-border bg-muted/10 w-full">
+                  {template.map((c) => {
+                    const s = computeScore({ ...state }, [c]);
+                    return (
+                      <div key={c.category_id} className="border border-border p-2 bg-white w-full overflow-hidden">
+                        <div className="text-[9px] tracking-wider uppercase font-bold text-muted-foreground truncate" title={c.name}>{c.name}</div>
+                        <div className={`font-display text-sm sm:text-base font-black mt-0.5 ${scoreColor(s)}`}>{s}%</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <label className="text-[11px] tracking-[0.12em] uppercase font-bold text-muted-foreground block">General Field Summary</label>
+                <textarea
+                  data-testid="general-notes"
+                  value={general}
+                  onChange={(e) => setGeneral(e.target.value)}
+                  rows={3}
+                  placeholder="Final summary observations…"
+                  className="mt-1 w-full p-2.5 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {cat && (
-        <div className="border border-border bg-white animate-fade-up w-full max-w-full overflow-hidden" data-testid={`category-${cat.category_id}`}>
-          <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-border bg-muted/30 gap-2 w-full">
-            <div className="truncate pr-2">
-              <span className="font-mono text-[9px] tracking-widest uppercase text-accent font-bold block">Pillar #{step} of 20</span>
-              <h3 className="font-display text-base sm:text-xl font-bold tracking-tight truncate">{cat.name}</h3>
+            <div className="flex items-center justify-between mt-5 gap-3 w-full max-w-full overflow-hidden">
+              <button
+                onClick={handlePrevStep}
+                data-testid="prev-step"
+                className="h-11 px-4 sm:px-5 border border-border font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 hover:bg-foreground hover:text-white transition-colors shrink-0"
+              >
+                <ArrowLeft weight="bold" size={15} /> Back
+              </button>
+
+              {isReview ? (
+                <button
+                  onClick={submit}
+                  disabled={saving}
+                  data-testid="submit-audit-button"
+                  className="flex-1 sm:flex-initial h-12 px-6 bg-primary text-white font-black text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-60 shadow-xl active:scale-95"
+                >
+                  <FloppyDisk weight="bold" size={18} /> {saving ? "Uploading…" : "Submit Inspection"}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setStep(totalSteps - 1)}
+                    className="h-11 px-3 sm:px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs tracking-wider uppercase flex items-center gap-1 transition-colors shadow-xs shrink-0"
+                  >
+                    <PaperPlaneRight weight="bold" size={15} /> <span className="hidden sm:inline">Jump to Submit</span>
+                  </button>
+                  <button
+                    onClick={() => setStep((s) => Math.min(totalSteps - 1, s + 1))}
+                    data-testid="next-step"
+                    className="h-11 px-5 sm:px-6 bg-foreground text-white font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 hover:bg-primary transition-colors shrink-0"
+                  >
+                    Next <ArrowRight weight="bold" size={15} />
+                  </button>
+                </div>
+              )}
             </div>
-            <span className="font-mono text-[11px] sm:text-xs text-muted-foreground font-bold bg-white px-2 py-1 border border-border shrink-0">{(cat.items || []).length} Items</span>
-          </div>
-
-          {(cat.items || []).map((item, i) => {
-            const cur = state[item.item_id] || {};
-            return (
-              <div key={item.item_id} className={`p-3 sm:px-6 sm:py-5 border-b border-border/60 w-full max-w-full overflow-hidden ${i % 2 ? "bg-muted/10" : ""}`}>
-                <div className="flex flex-col gap-2.5 w-full">
-                  <p className="text-xs sm:text-base font-medium leading-normal text-foreground break-words w-full">{item.text}</p>
-                  
-                  {/* Thumb-Friendly Mobile 3-Button Row */}
-                  <div className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-2 w-full max-w-md">
-                    {RESULTS.map((r) => {
-                      const Icon = r.icon;
-                      const on = cur.result === r.key;
-                      return (
-                        <button
-                          key={r.key}
-                          data-testid={`result-${item.item_id}-${r.key}`}
-                          onClick={() => setResult(item.item_id, item.text, r.key)}
-                          className={`flex items-center justify-center gap-1 h-10 sm:h-9 px-2 border text-[11px] sm:text-xs font-black tracking-wider uppercase transition-all ${on ? r.active : "border-border bg-white text-muted-foreground hover:border-foreground"}`}
-                        >
-                          <Icon weight="bold" size={14} /> {r.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2.5 mt-3.5 pt-3 border-t border-border/40 w-full">
-                  <input
-                    data-testid={`note-${item.item_id}`}
-                    value={cur.note || ""}
-                    onChange={(e) => setNote(item.item_id, e.target.value)}
-                    placeholder="Observation note…"
-                    className="w-full sm:flex-1 h-10 px-3 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  
-                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full sm:w-auto shrink-0">
-                    <label className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-accent/15 border border-accent text-foreground cursor-pointer text-[11px] sm:text-xs font-black tracking-wider uppercase hover:bg-accent hover:text-white transition-all active:scale-95 ${uploading === item.item_id ? "opacity-70 pointer-events-none bg-accent text-white" : ""}`} title="Instant camera photo shot">
-                      <Camera size={16} className="text-accent shrink-0" weight="bold" />
-                      <span>{uploading === item.item_id ? "Saving…" : "📸 Camera"}</span>
-                      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
-                    </label>
-
-                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 border border-border cursor-pointer text-[11px] sm:text-xs font-extrabold uppercase hover:bg-foreground hover:text-white transition-all active:scale-95" title="Pick photo from gallery">
-                      <FileImage size={16} className="text-muted-foreground shrink-0" />
-                      <span>Gallery</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
-                    </label>
-
-                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-red-50 border border-red-400/60 text-red-700 cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-red-700 hover:text-white transition-all active:scale-95" title="Attach PDF document report or invoice">
-                      <span className="text-sm">📄</span>
-                      <span>PDF Doc</span>
-                      <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], false)} />
-                    </label>
-
-                    <label className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 h-10 sm:h-9 bg-primary/10 border border-primary/50 text-primary cursor-pointer text-[11px] sm:text-xs font-bold uppercase hover:bg-primary hover:text-white transition-all active:scale-95" title="Draw arrows & annotate photo">
-                      <PaintBrush size={16} className="shrink-0" weight="bold" />
-                      <span>🎨 Draw</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && onSelectPhoto(item.item_id, e.target.files[0], true)} />
-                    </label>
-                  </div>
-                </div>
-
-                {cur.evidence?.length > 0 && (
-                  <div className="mt-3 p-3 bg-muted/15 border border-border/80 w-full">
-                    <div className="flex items-center justify-between text-xs text-emerald-800 font-extrabold font-mono mb-2">
-                      <span className="flex items-center gap-1.5">
-                        <ImageSquare size={16} weight="bold" className="text-emerald-700" />
-                        {cur.evidence.length} File Attachment(s) Linked &amp; Verified
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-sans uppercase font-bold">Ready for Report Archives</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 overflow-x-auto py-1">
-                      {cur.evidence.map((path) => (
-                        <EvidencePreview key={path} path={path} onRemove={(p) => removePhoto(item.item_id, p)} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {isReview && (
-        <div className="border border-border bg-white p-4 sm:p-8 animate-fade-up w-full max-w-full overflow-hidden" data-testid="audit-review">
-          <h3 className="font-display text-xl sm:text-2xl font-bold tracking-tight mb-1">Final Review &amp; Upload</h3>
-          <p className="text-xs text-muted-foreground mb-4">Computed overall compliance score: <span className={`font-display font-black text-lg sm:text-xl ${scoreColor(liveScore)}`}>{liveScore}%</span></p>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 max-h-64 overflow-y-auto p-2 border border-border bg-muted/10 w-full">
-            {template.map((c) => {
-              const s = computeScore({ ...state }, [c]);
-              return (
-                <div key={c.category_id} className="border border-border p-2 bg-white w-full overflow-hidden">
-                  <div className="text-[9px] tracking-wider uppercase font-bold text-muted-foreground truncate" title={c.name}>{c.name}</div>
-                  <div className={`font-display text-sm sm:text-base font-black mt-0.5 ${scoreColor(s)}`}>{s}%</div>
-                </div>
-              );
-            })}
-          </div>
-
-          <label className="text-[11px] tracking-[0.12em] uppercase font-bold text-muted-foreground block">General Field Summary</label>
-          <textarea
-            data-testid="general-notes"
-            value={general}
-            onChange={(e) => setGeneral(e.target.value)}
-            rows={3}
-            placeholder="Final summary observations…"
-            className="mt-1 w-full p-2.5 border border-input bg-white text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mt-5 gap-3 w-full max-w-full overflow-hidden">
-        <button
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-          data-testid="prev-step"
-          className="h-11 px-4 sm:px-5 border border-border font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 hover:bg-foreground hover:text-white transition-colors disabled:opacity-40 shrink-0"
-        >
-          <ArrowLeft weight="bold" size={15} /> Back
-        </button>
-        
-        {isReview ? (
-          <button
-            onClick={submit}
-            disabled={saving}
-            data-testid="submit-audit-button"
-            className="flex-1 sm:flex-initial h-12 px-6 bg-primary text-white font-black text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-60 shadow-xl active:scale-95"
-          >
-            <FloppyDisk weight="bold" size={18} /> {saving ? "Uploading…" : "Submit Inspection"}
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setStep(totalSteps - 1)}
-              className="h-11 px-3 sm:px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs tracking-wider uppercase flex items-center gap-1 transition-colors shadow-xs shrink-0"
-            >
-              <PaperPlaneRight weight="bold" size={15} /> <span className="hidden sm:inline">Jump to Submit</span>
-            </button>
-            <button
-              onClick={() => setStep((s) => Math.min(totalSteps - 1, s + 1))}
-              data-testid="next-step"
-              className="h-11 px-5 sm:px-6 bg-foreground text-white font-bold text-xs tracking-wider uppercase flex items-center gap-1.5 hover:bg-primary transition-colors shrink-0"
-            >
-              Next <ArrowRight weight="bold" size={15} />
-            </button>
-          </div>
-        )}
-      </div>
-    </AppShell>
-  );
-}
+          </AppShell>
+        );
+      }

@@ -5,15 +5,55 @@ import { useAuth } from "@/context/AuthContext";
 import { ScoreBadge, scoreColor } from "@/components/StatusBits";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { Shield, Printer, FileXls, Sliders, ArrowUpRight } from "@phosphor-icons/react";
+import { Shield, Printer, FileXls, Sliders, ArrowUpRight, Key, UserGear, LockKeyOpen } from "@phosphor-icons/react";
 
 export default function AdminPortal() {
   const { user } = useAuth();
   const [audits, setAudits] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [adminNewPassword, setAdminNewPassword] = useState("");
+  const [busyUserReset, setBusyUserReset] = useState(false);
 
   useEffect(() => {
     api.get("/audits").then((r) => setAudits(r.data)).catch(() => toast.error("Failed to load records"));
-  }, []);
+    if (user?.role === "admin") {
+      loadUsers();
+    }
+  }, [user]);
+
+  const loadUsers = () => {
+    api.get("/admin/users").then((r) => setUsers(r.data)).catch(() => {});
+  };
+
+  const handleAdminResetPassword = async (e) => {
+    e.preventDefault();
+    if (!selectedUser || !adminNewPassword) return;
+    setBusyUserReset(true);
+    try {
+      await api.post("/admin/reset-user-password", {
+        user_id: selectedUser.id,
+        new_password: adminNewPassword
+      });
+      toast.success(`Password for ${selectedUser.name} updated successfully!`);
+      setSelectedUser(null);
+      setAdminNewPassword("");
+      loadUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to reset user password");
+    } finally {
+      setBusyUserReset(false);
+    }
+  };
+
+  const handleClearLockouts = async () => {
+    try {
+      await api.all("/auth/clear-rate-limit");
+      toast.success("All account lockouts and rate limits have been cleared.");
+    } catch (err) {
+      toast.error("Failed to clear account lockouts");
+    }
+  };
 
   const isAdmin = user?.role === "admin";
   const isDirector = user?.role === "director";
@@ -62,9 +102,17 @@ export default function AdminPortal() {
           </p>
         </div>
         {isAdmin && (
-          <Link to="/template" className="h-11 px-5 bg-foreground text-white hover:bg-primary font-bold text-xs tracking-[0.15em] uppercase inline-flex items-center justify-center gap-2 transition-colors">
-            <Sliders weight="bold" size={16} /> Manage 133-Question Template
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleClearLockouts}
+              className="h-11 px-4 border border-border bg-white hover:bg-muted font-bold text-xs tracking-[0.1em] uppercase inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <LockKeyOpen weight="bold" size={16} className="text-amber-600" /> Unlock Lockouts
+            </button>
+            <Link to="/template" className="h-11 px-5 bg-foreground text-white hover:bg-primary font-bold text-xs tracking-[0.15em] uppercase inline-flex items-center justify-center gap-2 transition-colors">
+              <Sliders weight="bold" size={16} /> Manage Template
+            </Link>
+          </div>
         )}
         {isDirector && (
           <div className="h-11 px-4 bg-muted/80 border border-border text-muted-foreground font-mono text-xs inline-flex items-center gap-2">
@@ -72,6 +120,121 @@ export default function AdminPortal() {
           </div>
         )}
       </div>
+
+      {/* User Accounts & Password Management Panel for Admin */}
+      {isAdmin && users.length > 0 && (
+        <div className="border border-border bg-white shadow-xs mb-8 animate-fade-up">
+          <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-3 border-b border-border bg-slate-900 text-white gap-2">
+            <div className="inline-flex items-center gap-2 font-mono text-xs font-bold tracking-widest uppercase">
+              <UserGear size={18} className="text-sky-400" /> Registered User Accounts ({users.length})
+            </div>
+            <span className="text-[11px] font-mono text-sky-400 font-bold">● Admin Credential Management</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs sm:text-sm" data-testid="admin-users-table">
+              <thead>
+                <tr className="text-left text-[10px] tracking-[0.15em] uppercase text-muted-foreground border-b border-border bg-muted/10">
+                  <th className="px-4 sm:px-6 py-3 font-bold">User Name &amp; Email</th>
+                  <th className="px-4 sm:px-6 py-3 font-bold">Role</th>
+                  <th className="px-4 sm:px-6 py-3 font-bold hidden sm:table-cell">Status</th>
+                  <th className="px-4 sm:px-6 py-3 font-bold text-right">Password Controls</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {users.map((u, i) => (
+                  <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${i % 2 ? "bg-muted/10" : ""}`}>
+                    <td className="px-4 sm:px-6 py-3">
+                      <div className="font-bold text-foreground">{u.name}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground">{u.email}</div>
+                    </td>
+                    <td className="px-4 sm:px-6 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-mono font-bold uppercase ${
+                        u.role === "admin"
+                          ? "bg-purple-100 text-purple-800 border border-purple-300"
+                          : u.role === "director"
+                          ? "bg-blue-100 text-blue-800 border border-blue-300"
+                          : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 font-mono text-xs hidden sm:table-cell">
+                      {u.has_reset_code ? (
+                        <span className="text-amber-600 font-bold">🔑 Reset Code Active</span>
+                      ) : (
+                        <span className="text-muted-foreground">Active</span>
+                      )}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-right">
+                      <button
+                        onClick={() => { setSelectedUser(u); setAdminNewPassword(""); }}
+                        className="h-8 px-3 border border-border bg-white hover:bg-primary hover:text-white font-bold text-[10px] sm:text-[11px] tracking-wider uppercase inline-flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Key size={14} /> Reset Password
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Reset Password Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white border-2 border-slate-900 w-full max-w-md p-6 shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <div className="font-display font-black text-lg uppercase flex items-center gap-2">
+                <Key size={20} className="text-primary" /> Admin Password Override
+              </div>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="text-muted-foreground hover:text-foreground font-mono font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mb-4">
+              Set a new password for user <strong>{selectedUser.name}</strong> (<span className="font-mono">{selectedUser.email}</span>).
+            </p>
+
+            <form onSubmit={handleAdminResetPassword} className="space-y-4">
+              <div>
+                <label className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">New Password</label>
+                <input
+                  type="text"
+                  required
+                  value={adminNewPassword}
+                  onChange={(e) => setAdminNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 4 chars)"
+                  className="mt-1 w-full h-11 px-3 border border-input bg-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUser(null)}
+                  className="h-10 px-4 border border-border text-xs font-bold uppercase tracking-wider hover:bg-muted cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={busyUserReset}
+                  className="h-10 px-5 bg-primary text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-800 transition-colors disabled:opacity-60 cursor-pointer"
+                >
+                  {busyUserReset ? "Saving…" : "Save New Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="border border-border bg-white shadow-xs animate-fade-up">
         <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-3 border-b border-border bg-muted/30 gap-2">

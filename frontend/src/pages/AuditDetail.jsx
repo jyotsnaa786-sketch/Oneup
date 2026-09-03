@@ -44,8 +44,12 @@ function CategoryBlock({ cat, catScore, isEditing, onUpdateItemResult, onUpdateI
       <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-3.5 border-b border-border bg-muted/30 gap-2">
         <h3 className="font-display text-base sm:text-lg font-bold tracking-tight">{cat.name}</h3>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-muted-foreground">{catScore?.passed}/{catScore?.applicable} passed</span>
-          <span className={`font-display font-black text-lg sm:text-xl ${scoreColor(catScore?.score ?? 0)}`}>{catScore?.score ?? 0}%</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {catScore?.applicable === 0 ? "No applicable items" : `${catScore?.passed}/${catScore?.applicable} passed`}
+          </span>
+          <span className={`font-display font-black text-lg sm:text-xl ${catScore?.applicable === 0 ? 'text-muted-foreground' : scoreColor(catScore?.score ?? 0)}`}>
+            {catScore?.applicable === 0 ? "N/A" : `${catScore?.score ?? 0}%`}
+          </span>
         </div>
       </div>
       <div>
@@ -152,18 +156,8 @@ function CategoryBlock({ cat, catScore, isEditing, onUpdateItemResult, onUpdateI
 
 function EvidenceThumb({ path }) {
   const isCloudUrl = path && (path.startsWith("http://") || path.startsWith("https://"));
-  const [url, setUrl] = useState(isCloudUrl ? path : null);
   const isPdf = path && path.toLowerCase().endsWith(".pdf");
-
-  useEffect(() => {
-    let revoked;
-    if (!isPdf && !isCloudUrl && path) {
-      api.get(`/files/${path}`, { responseType: "blob" })
-        .then((r) => { const u = URL.createObjectURL(r.data); revoked = u; setUrl(u); })
-        .catch(() => {});
-    }
-    return () => revoked && URL.revokeObjectURL(revoked);
-  }, [path, isPdf, isCloudUrl]);
+  const imgSrc = isCloudUrl ? path : `${getHostBase()}/api/files/${path}`;
 
   return (
     <div className="w-16 h-16 sm:w-20 sm:h-20 border border-border bg-white overflow-hidden hover:opacity-85 transition-all shadow-2xs flex items-center justify-center" title={isPdf ? "Click to open PDF report" : "Click to view full photo"} data-testid="evidence-thumb">
@@ -172,10 +166,8 @@ function EvidenceThumb({ path }) {
           <span className="text-xl">📄</span>
           <span className="text-[8px] font-mono uppercase tracking-widest font-black">PDF</span>
         </div>
-      ) : url ? (
-        <img src={url} alt="evidence" className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full animate-pulse bg-muted flex items-center justify-center text-[9px] text-muted-foreground font-mono">Loading…</div>
+        <img src={imgSrc} alt="evidence" className="w-full h-full object-cover" />
       )}
     </div>
   );

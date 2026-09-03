@@ -256,7 +256,7 @@ async function run200Tests() {
     const r = await fetchReq('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: "jyotsnaa786@gmail.com", password: "admin123" })
+      body: JSON.stringify({ email: "jyotsnaa786@gmail.com", password: "girdhar123" })
     });
     if (r.ok) {
       const d = await r.json();

@@ -1,6 +1,9 @@
 import axios from "axios";
 
 export const getHostBase = () => {
+  if (import.meta.env && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/$/, "");
+  }
   if (typeof window === "undefined") return "http://localhost:8001";
   if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     if (window.location.port === "8001") {
@@ -8,7 +11,12 @@ export const getHostBase = () => {
     }
     return `http://${window.location.hostname}:8001`;
   }
-  return `${window.location.protocol}//${window.location.host}`;
+  // If hosted on Render directly alongside backend:
+  if (window.location.hostname.includes("onrender.com")) {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+  // Default Render Backend URL for Vercel / External Frontend hosting:
+  return "https://oneup-motors-audit.onrender.com";
 };
 
 export const API = `${getHostBase()}/api`;

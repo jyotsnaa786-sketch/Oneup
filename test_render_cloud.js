@@ -68,7 +68,7 @@ async function runCloudVerification() {
     const loginRes = await fetchTimeout(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'jyotsnaa786@gmail.com', password: 'admin123' })
+      body: JSON.stringify({ email: 'jyotsnaa786@gmail.com', password: 'girdhar123' })
     });
     if (!loginRes.ok) {
       const errText = await loginRes.text();

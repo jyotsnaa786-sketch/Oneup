@@ -50,8 +50,22 @@ export function AuthProvider({ children }) {
     api.post("/auth/logout").catch(() => {});
   };
 
+  const requestPasswordReset = async (email) => {
+    const { data } = await api.post("/auth/forgot-password", { email });
+    return data;
+  };
+
+  const resetPassword = async (email, code, new_password) => {
+    const { data } = await api.post("/auth/reset-password", { email, code, new_password });
+    if (data.access_token && typeof localStorage !== "undefined") {
+      localStorage.setItem("oneup_token", data.access_token);
+    }
+    setUser(data);
+    return data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, requestPasswordReset, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

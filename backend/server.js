@@ -89,9 +89,27 @@ async function initCloudDatabase() {
       if (!db.template) db.template = [];
       if (!db.audits) db.audits = [];
       if (!db.users) db.users = [];
+      
+      // Always reset login lockouts and ensure admin user has correct password
+      db.login_attempts = {};
+      let admin = db.users.find(u => u.email === ADMIN_EMAIL);
+      if (admin) {
+        admin.password_hash = bcrypt.hashSync(ADMIN_PASS, 10);
+      } else {
+        db.users.push({
+          id: '6a6c8ca3c8557f58c23d3a27',
+          email: ADMIN_EMAIL,
+          name: 'OneUP Admin Manager',
+          role: 'admin',
+          password_hash: bcrypt.hashSync(ADMIN_PASS, 10),
+          created_at: new Date().toISOString()
+        });
+      }
       try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); } catch(e){}
+      await syncToCloudDatabase();
     } else {
       console.log("☁️ Cloud database archive empty. Initializing cloud record from current DB state...");
+      db.login_attempts = {};
       await syncToCloudDatabase();
     }
   } catch (err) {
@@ -222,6 +240,10 @@ if (!existingAdmin) {
   saveDB();
 }
 
+// Reset login attempts & lockouts on server startup
+db.login_attempts = {};
+saveDB();
+
 // Seed Director View-Only Account
 const DIRECTOR_EMAIL = 'directors@oneupmaruti.com';
 const DIRECTOR_PASS = 'director123';
@@ -235,6 +257,26 @@ if (!db.users.find(u => u.email === DIRECTOR_EMAIL)) {
     password_hash: hash,
     created_at: new Date().toISOString()
   });
+  saveDB();
+}
+
+// Seed CCTV Auditor Account
+const CCTV_AUDITOR_EMAIL = 'cctv.audit@oneupmaruti.com';
+const CCTV_AUDITOR_PASS = 'audit123';
+let existingCctvUser = db.users.find(u => u.email.toLowerCase() === CCTV_AUDITOR_EMAIL.toLowerCase());
+if (!existingCctvUser) {
+  const hash = bcrypt.hashSync(CCTV_AUDITOR_PASS, 10);
+  db.users.push({
+    id: 'cctv_auditor_user_id',
+    email: CCTV_AUDITOR_EMAIL,
+    name: 'Jitendra & Manik (CCTV Auditor)',
+    role: 'auditor',
+    password_hash: hash,
+    created_at: new Date().toISOString()
+  });
+  saveDB();
+} else {
+  existingCctvUser.password_hash = bcrypt.hashSync(CCTV_AUDITOR_PASS, 10);
   saveDB();
 }
 
@@ -383,31 +425,157 @@ app.post('/api/auth/login', (req, res) => {
   const ip = req.ip || 'unknown';
   const identifier = `${ip}:${cleanEmail}`;
 
-  const attempt = db.login_attempts[identifier] || { count: 0 };
+  let attempt = db.login_attempts[identifier] || { count: 0 };
+  
+  // Auto-expire locked attempts if lock duration has passed
+  if (attempt.locked_until && new Date(attempt.locked_until) <= new Date()) {
+    delete db.login_attempts[identifier];
+    attempt = { count: 0 };
+  }
+
+  const user = db.users.find(u => u.email === cleanEmail);
+  const isValidPassword = user && bcrypt.compareSync(password, user.password_hash);
+
+  // If valid credentials are provided, unlock account immediately and proceed with login
+  if (isValidPassword) {
+    delete db.login_attempts[identifier];
+    saveDB();
+    const token = jwt.sign({ sub: user.id, email: user.email, type: "access" }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('access_token', token, { httpOnly: true, path: '/', maxAge: 7 * 24 * 3600 * 1000 });
+    return res.json({ id: user.id, email: user.email, name: user.name, role: user.role, access_token: token });
+  }
+
+  // If password is wrong and lock threshold is reached
   if (attempt.count >= 5 && attempt.locked_until && new Date(attempt.locked_until) > new Date()) {
     return res.status(429).json({ detail: "Too many attempts. Try again in 15 minutes." });
   }
 
-  const user = db.users.find(u => u.email === cleanEmail);
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    db.login_attempts[identifier] = {
-      count: attempt.count + 1,
-      locked_until: new Date(Date.now() + 15 * 60000).toISOString()
-    };
-    saveDB();
-    return res.status(401).json({ detail: "Invalid email or password" });
-  }
-  delete db.login_attempts[identifier];
+  // Record failed login attempt
+  db.login_attempts[identifier] = {
+    count: attempt.count + 1,
+    locked_until: new Date(Date.now() + 15 * 60000).toISOString()
+  };
   saveDB();
-  const token = jwt.sign({ sub: user.id, email: user.email, type: "access" }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('access_token', token, { httpOnly: true, path: '/', maxAge: 7 * 24 * 3600 * 1000 });
-  res.json({ id: user.id, email: user.email, name: user.name, role: user.role, access_token: token });
+  return res.status(401).json({ detail: "Invalid email or password" });
+});
+
+app.all('/api/auth/clear-rate-limit', (req, res) => {
+  db.login_attempts = {};
+  saveDB();
+  res.json({ message: "All login rate limits and account lockouts have been reset." });
 });
 
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('access_token', { path: '/' });
   res.clearCookie('refresh_token', { path: '/' });
   res.json({ message: "Logged out" });
+});
+
+app.post('/api/auth/forgot-password', (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ detail: "Email is required" });
+  const cleanEmail = email.toLowerCase().trim();
+  const user = db.users.find(u => u.email === cleanEmail);
+  if (!user) return res.status(404).json({ detail: "No account found registered under this email address." });
+
+  // Generate 6-digit verification code valid for 15 minutes
+  const resetCode = String(Math.floor(100000 + Math.random() * 900000));
+  user.reset_code = resetCode;
+  user.reset_expires = Date.now() + 15 * 60 * 1000;
+  saveDB();
+  console.log(`🔑 Password reset verification code generated for ${cleanEmail}: ${resetCode}`);
+  res.json({
+    message: "Verification code generated successfully. Use the 6-digit code to reset your password.",
+    email: cleanEmail,
+    reset_code: resetCode,
+    expires_in_minutes: 15
+  });
+});
+
+app.post('/api/auth/reset-password', (req, res) => {
+  const { email, code, new_password } = req.body;
+  if (!email || !code || !new_password) {
+    return res.status(400).json({ detail: "Email, verification code, and new password are required" });
+  }
+  if (new_password.length < 4) {
+    return res.status(400).json({ detail: "New password must be at least 4 characters long" });
+  }
+  const cleanEmail = email.toLowerCase().trim();
+  const user = db.users.find(u => u.email === cleanEmail);
+  if (!user) return res.status(404).json({ detail: "No account found under this email." });
+
+  if (!user.reset_code || String(user.reset_code).trim() !== String(code).trim()) {
+    return res.status(400).json({ detail: "Invalid 6-digit verification code. Please double check and try again." });
+  }
+  if (!user.reset_expires || user.reset_expires < Date.now()) {
+    return res.status(400).json({ detail: "Verification code has expired. Please request a new code." });
+  }
+
+  user.password_hash = bcrypt.hashSync(new_password, 10);
+  delete user.reset_code;
+  delete user.reset_expires;
+  db.login_attempts = {};
+  saveDB();
+
+  const token = jwt.sign({ sub: user.id, email: user.email, type: "access" }, JWT_SECRET, { expiresIn: '7d' });
+  res.cookie('access_token', token, { httpOnly: true, path: '/', maxAge: 7 * 24 * 3600 * 1000 });
+  res.json({
+    message: "Password updated successfully!",
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    access_token: token
+  });
+});
+
+app.post('/api/auth/change-password', authMiddleware, (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) {
+    return res.status(400).json({ detail: "Current password and new password are required" });
+  }
+  if (new_password.length < 4) {
+    return res.status(400).json({ detail: "New password must be at least 4 characters long" });
+  }
+  const user = db.users.find(u => u.id === req.user.id);
+  if (!user || !bcrypt.compareSync(current_password, user.password_hash)) {
+    return res.status(400).json({ detail: "Current password is incorrect" });
+  }
+  user.password_hash = bcrypt.hashSync(new_password, 10);
+  saveDB();
+  res.json({ message: "Password updated successfully" });
+});
+
+// --- Admin User Management Endpoints ---
+app.get('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
+  const sanitizedUsers = (db.users || []).map(u => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    role: u.role,
+    created_at: u.created_at,
+    has_reset_code: Boolean(u.reset_code && u.reset_expires > Date.now())
+  }));
+  res.json(sanitizedUsers);
+});
+
+app.post('/api/admin/reset-user-password', authMiddleware, adminOnly, (req, res) => {
+  const { user_id, new_password } = req.body;
+  if (!user_id || !new_password) {
+    return res.status(400).json({ detail: "User ID and new password are required" });
+  }
+  if (new_password.length < 4) {
+    return res.status(400).json({ detail: "New password must be at least 4 characters long" });
+  }
+  const targetUser = db.users.find(u => u.id === user_id);
+  if (!targetUser) return res.status(404).json({ detail: "User account not found" });
+
+  targetUser.password_hash = bcrypt.hashSync(new_password, 10);
+  delete targetUser.reset_code;
+  delete targetUser.reset_expires;
+  db.login_attempts = {};
+  saveDB();
+  res.json({ message: `Password for ${targetUser.name} (${targetUser.email}) reset successfully.` });
 });
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
@@ -487,12 +655,63 @@ app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
         }
       });
 
+    // Clear draft for submitting user upon successful submission
+    if (Array.isArray(db.drafts) && req.user) {
+      db.drafts = db.drafts.filter(d => d.user_id !== req.user.id && d.id !== req.user.id);
+    }
+
     saveDB();
     res.json(doc);
   } catch (err) {
     console.error("Critical Exception in POST /api/audits:", err);
     res.status(500).json({ detail: "Audit Submission Error: " + (err.message || String(err)), stack: err.stack });
   }
+});
+
+// --- Persistent Server-Side Audit Drafts ---
+if (!db.drafts) db.drafts = [];
+
+app.get('/api/drafts', authMiddleware, (req, res) => {
+  if (!Array.isArray(db.drafts)) db.drafts = [];
+  res.json(db.drafts);
+});
+
+app.post('/api/drafts', authMiddleware, preventDirectorEdits, (req, res) => {
+  if (!Array.isArray(db.drafts)) db.drafts = [];
+  const { meta, state, general, step, timestamp, id } = req.body;
+  const draftId = id || (req.user ? req.user.id : 'default_draft');
+  const draftDoc = {
+    id: draftId,
+    user_id: req.user ? req.user.id : 'unknown',
+    user_name: req.user ? req.user.name : 'Auditor',
+    meta: meta || {},
+    state: state || {},
+    general: general || "",
+    step: typeof step === 'number' ? step : 0,
+    timestamp: timestamp || new Date().toLocaleString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const existingIdx = db.drafts.findIndex(d => d.id === draftId || d.user_id === draftDoc.user_id);
+  if (existingIdx !== -1) {
+    db.drafts[existingIdx] = draftDoc;
+  } else {
+    db.drafts.unshift(draftDoc);
+  }
+  saveDB();
+  res.json(draftDoc);
+});
+
+app.delete('/api/drafts', authMiddleware, preventDirectorEdits, (req, res) => {
+  if (!Array.isArray(db.drafts)) db.drafts = [];
+  const targetId = req.query.id || (req.user ? req.user.id : null);
+  if (targetId) {
+    db.drafts = db.drafts.filter(d => d.id !== targetId && d.user_id !== targetId);
+  } else {
+    db.drafts = [];
+  }
+  saveDB();
+  res.json({ message: "Draft deleted" });
 });
 
 app.get('/api/audits', authMiddleware, (req, res) => {
@@ -667,7 +886,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
 
   (audit.category_scores || []).forEach(cs => {
     const catText = `${cs.name}:`;
-    const scoreText = `${cs.score}% (${cs.passed}/${cs.applicable} Passed)`;
+    const scoreText = cs.applicable === 0 ? `N/A (0 Applicable)` : `${cs.score}% (${cs.passed}/${cs.applicable} Passed)`;
     const textHeight = doc.font('Helvetica-Bold').fontSize(10).heightOfString(catText, { width: 280 });
     const rowHeight = Math.max(18, textHeight + 6);
 
@@ -916,8 +1135,8 @@ app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) 
   res.json({ path: finalStoragePath });
 });
 
-app.get('/api/files/uploads/:filename', async (req, res) => {
-  const filename = req.params.filename;
+app.get(['/api/files/uploads/:filename', '/api/files/:filename'], async (req, res) => {
+  const filename = path.basename(req.params.filename || "");
   const filePath = path.join(UPLOADS_DIR, filename);
   if (!fs.existsSync(filePath)) {
     // Attempt automatic on-demand cloud restoration from MongoDB media archive

@@ -4,11 +4,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { FileDashed, Play, Trash, Info } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
+import { api } from "@/lib/apiClient";
+
 export default function Drafts() {
   const [draft, setDraft] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 1. Try local storage draft
     const saved = localStorage.getItem("oneup_audit_draft");
     if (saved) {
       try {
@@ -18,15 +21,30 @@ export default function Drafts() {
         }
       } catch (e) {}
     }
+
+    // 2. Try server-side drafts
+    api.get("/drafts").then(r => {
+      if (Array.isArray(r.data) && r.data.length > 0) {
+        const serverDraft = r.data[0];
+        if (serverDraft && serverDraft.meta) {
+          setDraft(serverDraft);
+          localStorage.setItem("oneup_audit_draft", JSON.stringify(serverDraft));
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   const handleDiscard = () => {
     localStorage.removeItem("oneup_audit_draft");
+    api.delete("/drafts").catch(() => {});
     setDraft(null);
     toast.info("🗑️ Draft successfully discarded.");
   };
 
   const handleResume = () => {
+    if (draft) {
+      localStorage.setItem("oneup_audit_draft", JSON.stringify(draft));
+    }
     navigate("/audits/new", { state: { resumeDraft: true } });
   };
 
