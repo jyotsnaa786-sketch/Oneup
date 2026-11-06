@@ -581,7 +581,7 @@ export default function NewAudit() {
               <div className="border border-border bg-white animate-fade-up w-full max-w-full overflow-hidden" data-testid={`category-${cat.category_id}`}>
                 <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-border bg-muted/30 gap-2 w-full">
                   <div className="truncate pr-2">
-                    <span className="font-mono text-[9px] tracking-widest uppercase text-accent font-bold block">Pillar #{step} of 20</span>
+                    <span className="font-mono text-[9px] tracking-widest uppercase text-accent font-bold block">Pillar #{step} of {categories.length}</span>
                     <h3 className="font-display text-base sm:text-xl font-bold tracking-tight truncate">{cat.name}</h3>
                   </div>
                   <span className="font-mono text-[11px] sm:text-xs text-muted-foreground font-bold bg-white px-2 py-1 border border-border shrink-0">{(cat.items || []).length} Items</span>

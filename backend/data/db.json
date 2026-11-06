@@ -19053,35 +19053,35 @@
       "items": [
         {
           "item_id": "cat_1_security_gate_1",
-          "text": "Check entry register for customer name, vehicle number, in-time and out-time. [Reference / Source: Vehicle Entry App / Gate Entry Register]"
+          "text": "Check entry register for customer name, vehicle number, in-time and out-time. [Reference: Vehicle Entry App / Gate Entry Register]"
         },
         {
           "item_id": "cat_1_security_gate_2",
-          "text": "Check accessories, spares, belongings, tools and spare wheel are properly noted. [Reference / Source: Gate Register / Vehicle Inventory Sheet]"
+          "text": "Check accessories, spares, belongings, tools and spare wheel are properly noted. [Reference: Gate Register / Vehicle Inventory Sheet]"
         },
         {
           "item_id": "cat_1_security_gate_3",
-          "text": "Check physical vehicle condition for scratch, dent, breakage or visible damage. [Reference / Source: Physical Vehicle / Inventory Sheet / Photos]"
+          "text": "Check physical vehicle condition for scratch, dent, breakage or visible damage. [Reference: Physical Vehicle / Inventory Sheet / Photos]"
         },
         {
           "item_id": "cat_1_security_gate_4",
-          "text": "Check existing damages are recorded before vehicle enters workshop. [Reference / Source: Damage Pics / Inventory Sheet / Photos]"
+          "text": "Check existing damages are recorded before vehicle enters workshop. [Reference: Damage Pics / Inventory Sheet / Photos]"
         },
         {
           "item_id": "cat_1_security_gate_5",
-          "text": "Check odometer and fuel level are recorded correctly. [Reference / Source: Gate Register / Inventory Sheet / Physical Vehicle]"
+          "text": "Check odometer and fuel level are recorded correctly. [Reference: Gate Register / Inventory Sheet / Physical Vehicle]"
         },
         {
           "item_id": "cat_1_security_gate_6",
-          "text": "Check every vehicle entering workshop has a valid entry record. [Reference / Source: Gate Register / Physical Vehicle]"
+          "text": "Check every vehicle entering workshop has a valid entry record. [Reference: Gate Register / Physical Vehicle]"
         },
         {
           "item_id": "cat_1_security_gate_7",
-          "text": "Check vehicle exit is allowed only against authorised gate pass / delivery clearance. [Reference / Source: Gate Pass / DMS / Security Register Time Out]"
+          "text": "Check vehicle exit is allowed only against authorised gate pass / delivery clearance. [Reference: Gate Pass / DMS / Security Register Time Out]"
         },
         {
           "item_id": "cat_1_security_gate_8",
-          "text": "Check vehicle out-time is recorded at exit. [Reference / Source: Gate Entry/Exit Register]"
+          "text": "Check vehicle out-time is recorded at exit. [Reference: Gate Entry/Exit Register]"
         }
       ]
     },
@@ -19091,19 +19091,19 @@
       "items": [
         {
           "item_id": "cat_2_customer_recept_1",
-          "text": "Check customer is attended promptly on arrival. [Reference / Source: Reception Desk / Physical Observation / Token Register]"
+          "text": "Check customer is attended promptly on arrival. [Reference: Reception Desk / Physical Observation / Token Register]"
         },
         {
           "item_id": "cat_2_customer_recept_2",
-          "text": "Check customer is guided to assigned Service Advisor without unnecessary waiting. [Reference / Source: Reception Desk / Token Register / Physical Observation]"
+          "text": "Check customer is guided to assigned Service Advisor without unnecessary waiting. [Reference: Reception Desk / Token Register / Physical Observation]"
         },
         {
           "item_id": "cat_2_customer_recept_3",
-          "text": "Check reception and customer waiting area are clean and organised. [Reference / Source: Physical Observation]"
+          "text": "Check reception and customer waiting area are clean and organised. [Reference: Physical Observation]"
         },
         {
           "item_id": "cat_2_customer_recept_4",
-          "text": "Check basic customer amenities are available and functional. (TV, AC, Water Bottles etc.) [Reference / Source: Customer Lounge / Physical Observation]"
+          "text": "Check basic customer amenities are available and functional. (TV, AC, Water Bottles etc.) [Reference: Customer Lounge / Physical Observation]"
         }
       ]
     },
@@ -19113,31 +19113,31 @@
       "items": [
         {
           "item_id": "cat_3_vehicle_receivi_1",
-          "text": "Check joint walk-around inspection is done with customer, where applicable. [Reference / Source: Physical Observation / MTab / Inventory Sheet]"
+          "text": "Check joint walk-around inspection is done with customer, where applicable. [Reference: Physical Observation / MTab / Inventory Sheet]"
         },
         {
           "item_id": "cat_3_vehicle_receivi_2",
-          "text": "Check scratches, dents and damages are marked clearly. [Reference / Source: MTab / Damage Diagram / Physical Vehicle]"
+          "text": "Check scratches, dents and damages are marked clearly. [Reference: MTab / Damage Diagram / Physical Vehicle]"
         },
         {
           "item_id": "cat_3_vehicle_receivi_3",
-          "text": "Check vehicle photos are taken before repair starts. [Reference / Source: MTab Camera / Uploaded Photos]"
+          "text": "Check vehicle photos are taken before repair starts. [Reference: MTab Camera / Uploaded Photos]"
         },
         {
           "item_id": "cat_3_vehicle_receivi_4",
-          "text": "Check fuel level and odometer match the physical vehicle. [Reference / Source: MTab / Job Card / Physical Vehicle]"
+          "text": "Check fuel level and odometer match the physical vehicle. [Reference: MTab / Job Card / Physical Vehicle]"
         },
         {
           "item_id": "cat_3_vehicle_receivi_5",
-          "text": "Check accessories, tools, spare wheel and belongings are recorded. [Reference / Source: MTab / Inventory Sheet / Physical Vehicle]"
+          "text": "Check accessories, tools, spare wheel and belongings are recorded. [Reference: MTab / Inventory Sheet / Physical Vehicle]"
         },
         {
           "item_id": "cat_3_vehicle_receivi_6",
-          "text": "Check protective covers are used before workshop movement, where applicable. [Reference / Source: Physical Vehicle / Workshop Floor]"
+          "text": "Check protective covers are used before workshop movement, where applicable. [Reference: Physical Vehicle / Workshop Floor]"
         },
         {
           "item_id": "cat_3_vehicle_receivi_7",
-          "text": "Check customer receives vehicle-received confirmation. [Reference / Source: WhatsApp / SMS / Communication Record]"
+          "text": "Check customer receives vehicle-received confirmation. [Reference: WhatsApp / SMS / Communication Record]"
         }
       ]
     },
@@ -19147,35 +19147,35 @@
       "items": [
         {
           "item_id": "cat_4_job_card_openin_1",
-          "text": "Check every vehicle under repair has an open Job Card. [Reference / Source: DMS / MTab / Physical Vehicle]"
+          "text": "Check every vehicle under repair has an open Job Card. [Reference: DMS / MTab / Physical Vehicle]"
         },
         {
           "item_id": "cat_4_job_card_openin_2",
-          "text": "Check customer and vehicle details are correct on Job Card. [Reference / Source: Job Card / DMS / Vehicle]"
+          "text": "Check customer and vehicle details are correct on Job Card. [Reference: Job Card / DMS / Vehicle]"
         },
         {
           "item_id": "cat_4_job_card_openin_3",
-          "text": "Check all customer concerns are clearly written. [Reference / Source: Job Card / MTab]"
+          "text": "Check all customer concerns are clearly written. [Reference: Job Card / MTab]"
         },
         {
           "item_id": "cat_4_job_card_openin_4",
-          "text": "Check vague concerns are properly probed and explained. [Reference / Source: Job Card / Customer Concern Notes]"
+          "text": "Check vague concerns are properly probed and explained. [Reference: Job Card / Customer Concern Notes]"
         },
         {
           "item_id": "cat_4_job_card_openin_5",
-          "text": "Check repeat repair / revisit is highlighted. [Reference / Source: Job Card / Previous Job Cards / DMS]"
+          "text": "Check repeat repair / revisit is highlighted. [Reference: Job Card / Previous Job Cards / DMS]"
         },
         {
           "item_id": "cat_4_job_card_openin_6",
-          "text": "Check pending jobs from previous visit are identified. [Reference / Source: Service History / Previous Job Card]"
+          "text": "Check pending jobs from previous visit are identified. [Reference: Service History / Previous Job Card]"
         },
         {
           "item_id": "cat_4_job_card_openin_7",
-          "text": "Check promised delivery date and time are recorded. [Reference / Source: Job Card / DMS]"
+          "text": "Check promised delivery date and time are recorded. [Reference: Job Card / DMS]"
         },
         {
           "item_id": "cat_4_job_card_openin_8",
-          "text": "Check customer is informed of expected delivery timeline. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer is informed of expected delivery timeline. [Reference: WhatsApp / SMS / Call Log]"
         }
       ]
     },
@@ -19185,27 +19185,27 @@
       "items": [
         {
           "item_id": "cat_5_estimate_custom_1",
-          "text": "Check labour and parts estimate is prepared before chargeable work. [Reference / Source: Estimate / DMS / MTab]"
+          "text": "Check labour and parts estimate is prepared before chargeable work. [Reference: Estimate / DMS / MTab]"
         },
         {
           "item_id": "cat_5_estimate_custom_2",
-          "text": "Check estimate is shared with customer. [Reference / Source: Estimate / WhatsApp / Email]"
+          "text": "Check estimate is shared with customer. [Reference: Estimate / WhatsApp / Email]"
         },
         {
           "item_id": "cat_5_estimate_custom_3",
-          "text": "Check customer approval is received before starting chargeable work. [Reference / Source: WhatsApp / Digital Approval / Approval Record]"
+          "text": "Check customer approval is received before starting chargeable work. [Reference: WhatsApp / Digital Approval / Approval Record]"
         },
         {
           "item_id": "cat_5_estimate_custom_4",
-          "text": "Check approved amount and approved jobs are clearly recorded. [Reference / Source: Estimate / Approval Record / Job Card]"
+          "text": "Check approved amount and approved jobs are clearly recorded. [Reference: Estimate / Approval Record / Job Card]"
         },
         {
           "item_id": "cat_5_estimate_custom_5",
-          "text": "Check declined jobs are recorded separately. [Reference / Source: Job Card / DMS / Estimate]"
+          "text": "Check declined jobs are recorded separately. [Reference: Job Card / DMS / Estimate]"
         },
         {
           "item_id": "cat_5_estimate_custom_6",
-          "text": "Check promised delivery time is reconfirmed after estimate approval, where required. [Reference / Source: WhatsApp / Call Log / DMS]"
+          "text": "Check promised delivery time is reconfirmed after estimate approval, where required. [Reference: WhatsApp / Call Log / DMS]"
         }
       ]
     },
@@ -19215,27 +19215,27 @@
       "items": [
         {
           "item_id": "cat_6_workshop_bay_te_1",
-          "text": "Check vehicle is parked / repaired in designated bay. [Reference / Source: Workshop Floor / Bay Allocation]"
+          "text": "Check vehicle is parked / repaired in designated bay. [Reference: Workshop Floor / Bay Allocation]"
         },
         {
           "item_id": "cat_6_workshop_bay_te_2",
-          "text": "Check bay is allocated in system or control board. [Reference / Source: DMS / Bay Allocation Report / Control Board]"
+          "text": "Check bay is allocated in system or control board. [Reference: DMS / Bay Allocation Report / Control Board]"
         },
         {
           "item_id": "cat_6_workshop_bay_te_3",
-          "text": "Check technician is assigned against the Job Card. [Reference / Source: DMS / Job Allocation]"
+          "text": "Check technician is assigned against the Job Card. [Reference: DMS / Job Allocation]"
         },
         {
           "item_id": "cat_6_workshop_bay_te_4",
-          "text": "Check assigned technician matches the person working on vehicle. [Reference / Source: Physical Observation / DMS / Job Allocation]"
+          "text": "Check assigned technician matches the person working on vehicle. [Reference: Physical Observation / DMS / Job Allocation]"
         },
         {
           "item_id": "cat_6_workshop_bay_te_5",
-          "text": "Check technician has Job Card / repair instructions before work. [Reference / Source: Job Card / Repair Order / Physical Observation]"
+          "text": "Check technician has Job Card / repair instructions before work. [Reference: Job Card / Repair Order / Physical Observation]"
         },
         {
           "item_id": "cat_6_workshop_bay_te_6",
-          "text": "Check vehicle keys are controlled and traceable. [Reference / Source: Key Register / Key Cabinet / DMS]"
+          "text": "Check vehicle keys are controlled and traceable. [Reference: Key Register / Key Cabinet / DMS]"
         }
       ]
     },
@@ -19245,35 +19245,35 @@
       "items": [
         {
           "item_id": "cat_7_repair_executio_1",
-          "text": "Check repair is carried out only against approved Job Card work. [Reference / Source: Job Card / Physical Vehicle / DMS]"
+          "text": "Check repair is carried out only against approved Job Card work. [Reference: Job Card / Physical Vehicle / DMS]"
         },
         {
           "item_id": "cat_7_repair_executio_2",
-          "text": "Check workshop status is updated as vehicle moves through repair stages. [Reference / Source: DMS / Workshop Control Board]"
+          "text": "Check workshop status is updated as vehicle moves through repair stages. [Reference: DMS / Workshop Control Board]"
         },
         {
           "item_id": "cat_7_repair_executio_3",
-          "text": "Check start and completion status of repair is traceable. [Reference / Source: DMS / Job Status / Technician Clocking]"
+          "text": "Check start and completion status of repair is traceable. [Reference: DMS / Job Status / Technician Clocking]"
         },
         {
           "item_id": "cat_7_repair_executio_4",
-          "text": "Check correct tools and equipment are used for repair. [Reference / Source: Workshop Floor / Physical Observation]"
+          "text": "Check correct tools and equipment are used for repair. [Reference: Workshop Floor / Physical Observation]"
         },
         {
           "item_id": "cat_7_repair_executio_5",
-          "text": "Check removed parts are handled and stored safely. [Reference / Source: Workshop Floor / Parts Return Area]"
+          "text": "Check removed parts are handled and stored safely. [Reference: Workshop Floor / Parts Return Area]"
         },
         {
           "item_id": "cat_7_repair_executio_6",
-          "text": "Check vehicle is protected from damage during repair. [Reference / Source: Physical Vehicle / Workshop Floor]"
+          "text": "Check vehicle is protected from damage during repair. [Reference: Physical Vehicle / Workshop Floor]"
         },
         {
           "item_id": "cat_7_repair_executio_7",
-          "text": "Check long-duration jobs are regularly tracked against promised delivery time. [Reference / Source: DMS / WIP Report / Workshop Control]"
+          "text": "Check long-duration jobs are regularly tracked against promised delivery time. [Reference: DMS / WIP Report / Workshop Control]"
         },
         {
           "item_id": "cat_7_repair_executio_8",
-          "text": "Check customer receives work-in-progress update for long repair jobs. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer receives work-in-progress update for long repair jobs. [Reference: WhatsApp / SMS / Call Log]"
         }
       ]
     },
@@ -19283,23 +19283,23 @@
       "items": [
         {
           "item_id": "cat_8_additional_work_1",
-          "text": "Check additional work is recorded before starting repair. [Reference / Source: Job Card / Revised Estimate / DMS]"
+          "text": "Check additional work is recorded before starting repair. [Reference: Job Card / Revised Estimate / DMS]"
         },
         {
           "item_id": "cat_8_additional_work_2",
-          "text": "Check reason for additional work is explained to customer. [Reference / Source: WhatsApp / Call Log / Revised Estimate]"
+          "text": "Check reason for additional work is explained to customer. [Reference: WhatsApp / Call Log / Revised Estimate]"
         },
         {
           "item_id": "cat_8_additional_work_3",
-          "text": "Check additional cost is shared with customer. [Reference / Source: Revised Estimate / WhatsApp]"
+          "text": "Check additional cost is shared with customer. [Reference: Revised Estimate / WhatsApp]"
         },
         {
           "item_id": "cat_8_additional_work_4",
-          "text": "Check customer approval is received before additional work starts. [Reference / Source: WhatsApp / Digital Approval / Approval Record]"
+          "text": "Check customer approval is received before additional work starts. [Reference: WhatsApp / Digital Approval / Approval Record]"
         },
         {
           "item_id": "cat_8_additional_work_5",
-          "text": "Check approval time is earlier than additional repair execution. [Reference / Source: WhatsApp Timestamp / DMS Job Timeline]"
+          "text": "Check approval time is earlier than additional repair execution. [Reference: WhatsApp Timestamp / DMS Job Timeline]"
         }
       ]
     },
@@ -19309,27 +19309,27 @@
       "items": [
         {
           "item_id": "cat_9_delay_hold_up_1",
-          "text": "Check reason for stopped / held-up job is recorded. [Reference / Source: DMS / Hold-up Report / WIP Report]"
+          "text": "Check reason for stopped / held-up job is recorded. [Reference: DMS / Hold-up Report / WIP Report]"
         },
         {
           "item_id": "cat_9_delay_hold_up_2",
-          "text": "Check held-up vehicle is moved to proper holding area, where applicable. [Reference / Source: Physical Vehicle / Hold-up Area]"
+          "text": "Check held-up vehicle is moved to proper holding area, where applicable. [Reference: Physical Vehicle / Hold-up Area]"
         },
         {
           "item_id": "cat_9_delay_hold_up_3",
-          "text": "Check parts-related delay is recorded and tracked. [Reference / Source: BO Report / DMS / Parts Pending Report]"
+          "text": "Check parts-related delay is recorded and tracked. [Reference: BO Report / DMS / Parts Pending Report]"
         },
         {
           "item_id": "cat_9_delay_hold_up_4",
-          "text": "Check customer is informed before original promised delivery time if delayed. [Reference / Source: WhatsApp / SMS / Call Log / DMS PDT]"
+          "text": "Check customer is informed before original promised delivery time if delayed. [Reference: WhatsApp / SMS / Call Log / DMS PDT]"
         },
         {
           "item_id": "cat_9_delay_hold_up_5",
-          "text": "Check reason for delay and revised delivery time are shared. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check reason for delay and revised delivery time are shared. [Reference: WhatsApp / SMS / Call Log]"
         },
         {
           "item_id": "cat_9_delay_hold_up_6",
-          "text": "Check revised promised delivery time is updated in system. [Reference / Source: DMS / Job Card / WIP Report]"
+          "text": "Check revised promised delivery time is updated in system. [Reference: DMS / Job Card / WIP Report]"
         }
       ]
     },
@@ -19339,31 +19339,31 @@
       "items": [
         {
           "item_id": "cat_10_parts_1",
-          "text": "Check parts are issued only against valid Job Card. [Reference / Source: DMS / Parts Issue Slip / Job Card]"
+          "text": "Check parts are issued only against valid Job Card. [Reference: DMS / Parts Issue Slip / Job Card]"
         },
         {
           "item_id": "cat_10_parts_2",
-          "text": "Check issued parts match repair requirement. [Reference / Source: Parts Issue Slip / Job Card / Physical Repair]"
+          "text": "Check issued parts match repair requirement. [Reference: Parts Issue Slip / Job Card / Physical Repair]"
         },
         {
           "item_id": "cat_10_parts_3",
-          "text": "Check all issued parts are traceable to vehicle / Job Card. [Reference / Source: DMS / Parts Issue Register]"
+          "text": "Check all issued parts are traceable to vehicle / Job Card. [Reference: DMS / Parts Issue Register]"
         },
         {
           "item_id": "cat_10_parts_4",
-          "text": "Check pending / back-order parts are monitored. [Reference / Source: BO Report / DMS]"
+          "text": "Check pending / back-order parts are monitored. [Reference: BO Report / DMS]"
         },
         {
           "item_id": "cat_10_parts_5",
-          "text": "Check reserved / pre-picked parts are properly labelled. [Reference / Source: Parts Storage / Reservation Record]"
+          "text": "Check reserved / pre-picked parts are properly labelled. [Reference: Parts Storage / Reservation Record]"
         },
         {
           "item_id": "cat_10_parts_6",
-          "text": "Check replaced parts are handled as per process. [Reference / Source: Replaced Parts Area / Job Card / Parts Record]"
+          "text": "Check replaced parts are handled as per process. [Reference: Replaced Parts Area / Job Card / Parts Record]"
         },
         {
           "item_id": "cat_10_parts_7",
-          "text": "Check customer is informed when parts delay affects delivery. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer is informed when parts delay affects delivery. [Reference: WhatsApp / SMS / Call Log]"
         }
       ]
     },
@@ -19373,23 +19373,23 @@
       "items": [
         {
           "item_id": "cat_11_road_test_diagn_1",
-          "text": "Check road test is done where required for diagnosis. [Reference / Source: Road Test Sheet / Job Card / DMS]"
+          "text": "Check road test is done where required for diagnosis. [Reference: Road Test Sheet / Job Card / DMS]"
         },
         {
           "item_id": "cat_11_road_test_diagn_2",
-          "text": "Check road test findings are recorded. [Reference / Source: Road Test Sheet / Job Card]"
+          "text": "Check road test findings are recorded. [Reference: Road Test Sheet / Job Card]"
         },
         {
           "item_id": "cat_11_road_test_diagn_3",
-          "text": "Check technical concern is properly diagnosed before parts replacement. [Reference / Source: Diagnostic Report / DMS / Job Card]"
+          "text": "Check technical concern is properly diagnosed before parts replacement. [Reference: Diagnostic Report / DMS / Job Card]"
         },
         {
           "item_id": "cat_11_road_test_diagn_4",
-          "text": "Check post-repair road test is done where required. [Reference / Source: Road Test Sheet / Job Card]"
+          "text": "Check post-repair road test is done where required. [Reference: Road Test Sheet / Job Card]"
         },
         {
           "item_id": "cat_11_road_test_diagn_5",
-          "text": "Check original customer concern is verified after repair. [Reference / Source: QC Checklist / Road Test Sheet / Job Card]"
+          "text": "Check original customer concern is verified after repair. [Reference: QC Checklist / Road Test Sheet / Job Card]"
         }
       ]
     },
@@ -19399,31 +19399,31 @@
       "items": [
         {
           "item_id": "cat_12_final_qc_1",
-          "text": "Check final QC is completed before vehicle is declared ready. [Reference / Source: QC Checklist / DMS / QC Area]"
+          "text": "Check final QC is completed before vehicle is declared ready. [Reference: QC Checklist / DMS / QC Area]"
         },
         {
           "item_id": "cat_12_final_qc_2",
-          "text": "Check all approved jobs are verified as completed. [Reference / Source: QC Checklist / Job Card]"
+          "text": "Check all approved jobs are verified as completed. [Reference: QC Checklist / Job Card]"
         },
         {
           "item_id": "cat_12_final_qc_3",
-          "text": "Check original customer concerns are verified as resolved. [Reference / Source: QC Checklist / Job Card]"
+          "text": "Check original customer concerns are verified as resolved. [Reference: QC Checklist / Job Card]"
         },
         {
           "item_id": "cat_12_final_qc_4",
-          "text": "Check warning lights / visible defects are not present. [Reference / Source: Physical Vehicle / QC Checklist]"
+          "text": "Check warning lights / visible defects are not present. [Reference: Physical Vehicle / QC Checklist]"
         },
         {
           "item_id": "cat_12_final_qc_5",
-          "text": "Check repeat repair vehicles receive extra technical / QC attention. [Reference / Source: QC Sheet / Repeat Repair Record]"
+          "text": "Check repeat repair vehicles receive extra technical / QC attention. [Reference: QC Sheet / Repeat Repair Record]"
         },
         {
           "item_id": "cat_12_final_qc_6",
-          "text": "Check QC is signed by authorised person. [Reference / Source: QC Checklist]"
+          "text": "Check QC is signed by authorised person. [Reference: QC Checklist]"
         },
         {
           "item_id": "cat_12_final_qc_7",
-          "text": "Check customer is updated when repair is completed / vehicle moves to final QC. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer is updated when repair is completed / vehicle moves to final QC. [Reference: WhatsApp / SMS / Call Log]"
         }
       ]
     },
@@ -19433,23 +19433,23 @@
       "items": [
         {
           "item_id": "cat_13_car_wash_cleani_1",
-          "text": "Check vehicle is sent for washing after repair / QC stage as per process. [Reference / Source: Wash Register / DMS / Physical Vehicle]"
+          "text": "Check vehicle is sent for washing after repair / QC stage as per process. [Reference: Wash Register / DMS / Physical Vehicle]"
         },
         {
           "item_id": "cat_13_car_wash_cleani_2",
-          "text": "Check exterior is properly cleaned. [Reference / Source: Physical Vehicle / Wash Bay]"
+          "text": "Check exterior is properly cleaned. [Reference: Physical Vehicle / Wash Bay]"
         },
         {
           "item_id": "cat_13_car_wash_cleani_3",
-          "text": "Check interior is properly cleaned. [Reference / Source: Physical Vehicle / Wash Bay]"
+          "text": "Check interior is properly cleaned. [Reference: Physical Vehicle / Wash Bay]"
         },
         {
           "item_id": "cat_13_car_wash_cleani_4",
-          "text": "Check no customer belongings are disturbed / missing after cleaning. [Reference / Source: Inventory Sheet / Physical Vehicle]"
+          "text": "Check no customer belongings are disturbed / missing after cleaning. [Reference: Inventory Sheet / Physical Vehicle]"
         },
         {
           "item_id": "cat_13_car_wash_cleani_5",
-          "text": "Check washed vehicle is moved to designated ready / delivery area. [Reference / Source: Physical Vehicle / Delivery Area]"
+          "text": "Check washed vehicle is moved to designated ready / delivery area. [Reference: Physical Vehicle / Delivery Area]"
         }
       ]
     },
@@ -19459,39 +19459,39 @@
       "items": [
         {
           "item_id": "cat_14_bodyshop_1",
-          "text": "Check bodyshop estimate is prepared before repair. [Reference / Source: DMS / Bodyshop Estimate]"
+          "text": "Check bodyshop estimate is prepared before repair. [Reference: DMS / Bodyshop Estimate]"
         },
         {
           "item_id": "cat_14_bodyshop_2",
-          "text": "Check customer approval is available for customer-pay repair. [Reference / Source: Estimate / WhatsApp / Approval Record]"
+          "text": "Check customer approval is available for customer-pay repair. [Reference: Estimate / WhatsApp / Approval Record]"
         },
         {
           "item_id": "cat_14_bodyshop_3",
-          "text": "Check insurance approval is available before insurance repair, where applicable. [Reference / Source: Insurance Portal / Approval Copy]"
+          "text": "Check insurance approval is available before insurance repair, where applicable. [Reference: Insurance Portal / Approval Copy]"
         },
         {
           "item_id": "cat_14_bodyshop_4",
-          "text": "Check supplementary estimate approval is available for additional insurance work. [Reference / Source: Supplement Approval / Insurance Portal]"
+          "text": "Check supplementary estimate approval is available for additional insurance work. [Reference: Supplement Approval / Insurance Portal]"
         },
         {
           "item_id": "cat_14_bodyshop_5",
-          "text": "Check vehicle condition is protected during denting and painting. [Reference / Source: Physical Vehicle / Bodyshop Floor]"
+          "text": "Check vehicle condition is protected during denting and painting. [Reference: Physical Vehicle / Bodyshop Floor]"
         },
         {
           "item_id": "cat_14_bodyshop_6",
-          "text": "Check paint booth process / log is maintained. [Reference / Source: Paint Booth / Paint Log]"
+          "text": "Check paint booth process / log is maintained. [Reference: Paint Booth / Paint Log]"
         },
         {
           "item_id": "cat_14_bodyshop_7",
-          "text": "Check dent and paint finish is inspected before delivery. [Reference / Source: Bodyshop QC Sheet / Physical Vehicle]"
+          "text": "Check dent and paint finish is inspected before delivery. [Reference: Bodyshop QC Sheet / Physical Vehicle]"
         },
         {
           "item_id": "cat_14_bodyshop_8",
-          "text": "Check customer receives progress update for long bodyshop jobs. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer receives progress update for long bodyshop jobs. [Reference: WhatsApp / SMS / Call Log]"
         },
         {
           "item_id": "cat_14_bodyshop_9",
-          "text": "Check customer is informed of insurance / parts / repair delay. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer is informed of insurance / parts / repair delay. [Reference: WhatsApp / SMS / Call Log]"
         }
       ]
     },
@@ -19501,39 +19501,39 @@
       "items": [
         {
           "item_id": "cat_15_billing_payment_1",
-          "text": "Check invoice is generated against completed Job Card. [Reference / Source: Invoice / Job Card / DMS]"
+          "text": "Check invoice is generated against completed Job Card. [Reference: Invoice / Job Card / DMS]"
         },
         {
           "item_id": "cat_15_billing_payment_2",
-          "text": "Check invoice matches approved estimate and approved additional work. [Reference / Source: Invoice / Estimate / Approval Record]"
+          "text": "Check invoice matches approved estimate and approved additional work. [Reference: Invoice / Estimate / Approval Record]"
         },
         {
           "item_id": "cat_15_billing_payment_3",
-          "text": "Check all issued parts are billed, where chargeable. [Reference / Source: Parts Issue Register / Invoice]"
+          "text": "Check all issued parts are billed, where chargeable. [Reference: Parts Issue Register / Invoice]"
         },
         {
           "item_id": "cat_15_billing_payment_4",
-          "text": "Check labour billed matches work performed. [Reference / Source: Job Card / Invoice]"
+          "text": "Check labour billed matches work performed. [Reference: Job Card / Invoice]"
         },
         {
           "item_id": "cat_15_billing_payment_5",
-          "text": "Check discounts / complimentary jobs have proper approval. [Reference / Source: Discount Approval / DMS / Approval Mail]"
+          "text": "Check discounts / complimentary jobs have proper approval. [Reference: Discount Approval / DMS / Approval Mail]"
         },
         {
           "item_id": "cat_15_billing_payment_6",
-          "text": "Check correct payment amount is collected. [Reference / Source: Invoice / Receipt / DMS]"
+          "text": "Check correct payment amount is collected. [Reference: Invoice / Receipt / DMS]"
         },
         {
           "item_id": "cat_15_billing_payment_7",
-          "text": "Check payment mode matches receipt. [Reference / Source: Receipt / DMS / Payment Record]"
+          "text": "Check payment mode matches receipt. [Reference: Receipt / DMS / Payment Record]"
         },
         {
           "item_id": "cat_15_billing_payment_8",
-          "text": "Check receipt is issued for payment. [Reference / Source: Receipt / DMS]"
+          "text": "Check receipt is issued for payment. [Reference: Receipt / DMS]"
         },
         {
           "item_id": "cat_15_billing_payment_9",
-          "text": "Check final payable amount is communicated to customer. [Reference / Source: Invoice / WhatsApp / Call Log]"
+          "text": "Check final payable amount is communicated to customer. [Reference: Invoice / WhatsApp / Call Log]"
         }
       ]
     },
@@ -19543,39 +19543,39 @@
       "items": [
         {
           "item_id": "cat_16_vehicle_ready_d_1",
-          "text": "Check vehicle is declared ready only after repair, QC and cleaning. [Reference / Source: DMS / QC Checklist / Physical Vehicle]"
+          "text": "Check vehicle is declared ready only after repair, QC and cleaning. [Reference: DMS / QC Checklist / Physical Vehicle]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_2",
-          "text": "Check vehicle is parked in designated delivery area. [Reference / Source: Physical Vehicle / Delivery Area]"
+          "text": "Check vehicle is parked in designated delivery area. [Reference: Physical Vehicle / Delivery Area]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_3",
-          "text": "Check customer receives vehicle-ready update. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer receives vehicle-ready update. [Reference: WhatsApp / SMS / Call Log]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_4",
-          "text": "Check Service Advisor explains work carried out. [Reference / Source: Delivery Checklist / Physical Observation]"
+          "text": "Check Service Advisor explains work carried out. [Reference: Delivery Checklist / Physical Observation]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_5",
-          "text": "Check invoice and charges are explained to customer. [Reference / Source: Invoice / Delivery Checklist / Physical Observation]"
+          "text": "Check invoice and charges are explained to customer. [Reference: Invoice / Delivery Checklist / Physical Observation]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_6",
-          "text": "Check declined / future jobs are explained, where applicable. [Reference / Source: Job Card / Delivery Checklist]"
+          "text": "Check declined / future jobs are explained, where applicable. [Reference: Job Card / Delivery Checklist]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_7",
-          "text": "Check customer acknowledgement / signature is obtained. [Reference / Source: Delivery Checklist / Job Card / DMS]"
+          "text": "Check customer acknowledgement / signature is obtained. [Reference: Delivery Checklist / Job Card / DMS]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_8",
-          "text": "Check vehicle handover time is recorded. [Reference / Source: DMS / Gate Register / Delivery Record]"
+          "text": "Check vehicle handover time is recorded. [Reference: DMS / Gate Register / Delivery Record]"
         },
         {
           "item_id": "cat_16_vehicle_ready_d_9",
-          "text": "Check delivery / thank-you confirmation is sent after handover. [Reference / Source: WhatsApp / SMS]"
+          "text": "Check delivery / thank-you confirmation is sent after handover. [Reference: WhatsApp / SMS]"
         }
       ]
     },
@@ -19585,23 +19585,23 @@
       "items": [
         {
           "item_id": "cat_17_vehicle_drop_1",
-          "text": "Check drop location and time are confirmed with customer. [Reference / Source: Smart Pick Portal / WhatsApp / Call Log]"
+          "text": "Check drop location and time are confirmed with customer. [Reference: Smart Pick Portal / WhatsApp / Call Log]"
         },
         {
           "item_id": "cat_17_vehicle_drop_2",
-          "text": "Check authorised driver / associate is assigned. [Reference / Source: Pickup & Drop Schedule / Smart Pick Portal]"
+          "text": "Check authorised driver / associate is assigned. [Reference: Pickup & Drop Schedule / Smart Pick Portal]"
         },
         {
           "item_id": "cat_17_vehicle_drop_3",
-          "text": "Check vehicle dispatch time is recorded. [Reference / Source: Smart Pick Portal / Gate Register]"
+          "text": "Check vehicle dispatch time is recorded. [Reference: Smart Pick Portal / Gate Register]"
         },
         {
           "item_id": "cat_17_vehicle_drop_4",
-          "text": "Check customer is informed when vehicle is dispatched. [Reference / Source: WhatsApp / SMS / Call Log]"
+          "text": "Check customer is informed when vehicle is dispatched. [Reference: WhatsApp / SMS / Call Log]"
         },
         {
           "item_id": "cat_17_vehicle_drop_5",
-          "text": "Check successful delivery / drop acknowledgement is available. [Reference / Source: Smart Pick App / Customer Acknowledgement]"
+          "text": "Check successful delivery / drop acknowledgement is available. [Reference: Smart Pick App / Customer Acknowledgement]"
         }
       ]
     },
@@ -19611,23 +19611,23 @@
       "items": [
         {
           "item_id": "cat_18_warranty_techni_1",
-          "text": "Check warranty jobs are correctly identified and documented. [Reference / Source: Warranty Register / DMS / Job Card]"
+          "text": "Check warranty jobs are correctly identified and documented. [Reference: Warranty Register / DMS / Job Card]"
         },
         {
           "item_id": "cat_18_warranty_techni_2",
-          "text": "Check required warranty approval is available. [Reference / Source: Warranty Portal / Approval Record]"
+          "text": "Check required warranty approval is available. [Reference: Warranty Portal / Approval Record]"
         },
         {
           "item_id": "cat_18_warranty_techni_3",
-          "text": "Check correct labour operation / code is used. [Reference / Source: Warranty Register / DMS]"
+          "text": "Check correct labour operation / code is used. [Reference: Warranty Register / DMS]"
         },
         {
           "item_id": "cat_18_warranty_techni_4",
-          "text": "Check warranty parts are correctly identified and retained as required. [Reference / Source: Warranty Parts Area / Warranty Register]"
+          "text": "Check warranty parts are correctly identified and retained as required. [Reference: Warranty Parts Area / Warranty Register]"
         },
         {
           "item_id": "cat_18_warranty_techni_5",
-          "text": "Check technical diagnosis / escalation is documented for complex cases. [Reference / Source: Diagnostic Report / DMS / Technical Case Record]"
+          "text": "Check technical diagnosis / escalation is documented for complex cases. [Reference: Diagnostic Report / DMS / Technical Case Record]"
         }
       ]
     },
@@ -19637,65 +19637,39 @@
       "items": [
         {
           "item_id": "cat_19_safety_housekee_1",
-          "text": "Check workshop floor is clean and free from oil spills / obstructions. [Reference / Source: Physical Observation / Workshop Floor]"
+          "text": "Check workshop floor is clean and free from oil spills / obstructions. [Reference: Physical Observation / Workshop Floor]"
         },
         {
           "item_id": "cat_19_safety_housekee_2",
-          "text": "Check technicians use required PPE. [Reference / Source: Physical Observation]"
+          "text": "Check technicians use required PPE. [Reference: Physical Observation]"
         },
         {
           "item_id": "cat_19_safety_housekee_3",
-          "text": "Check fire extinguishers are available, accessible and within validity. [Reference / Source: Physical Inspection / Fire Equipment Register]"
+          "text": "Check fire extinguishers are available, accessible and within validity. [Reference: Physical Inspection / Fire Equipment Register]"
         },
         {
           "item_id": "cat_19_safety_housekee_4",
-          "text": "Check emergency exits and passages are clear. [Reference / Source: Physical Observation]"
+          "text": "Check emergency exits and passages are clear. [Reference: Physical Observation]"
         },
         {
           "item_id": "cat_19_safety_housekee_5",
-          "text": "Check tools and equipment are stored safely. [Reference / Source: Workshop / Tool Room]"
+          "text": "Check tools and equipment are stored safely. [Reference: Workshop / Tool Room]"
         },
         {
           "item_id": "cat_19_safety_housekee_6",
-          "text": "Check lifts, jacks and workshop equipment show required inspection / maintenance status. [Reference / Source: Equipment Register / Physical Equipment]"
+          "text": "Check lifts, jacks and workshop equipment show required inspection / maintenance status. [Reference: Equipment Register / Physical Equipment]"
         },
         {
           "item_id": "cat_19_safety_housekee_7",
-          "text": "Check waste oil, batteries and hazardous waste are stored in designated area. [Reference / Source: Waste Storage Area / Disposal Record]"
+          "text": "Check waste oil, batteries and hazardous waste are stored in designated area. [Reference: Waste Storage Area / Disposal Record]"
         },
         {
           "item_id": "cat_19_safety_housekee_8",
-          "text": "Check customer vehicles and keys are secured. [Reference / Source: Workshop / Key Cabinet / Key Register]"
+          "text": "Check customer vehicles and keys are secured. [Reference: Workshop / Key Cabinet / Key Register]"
         },
         {
           "item_id": "cat_19_safety_housekee_9",
-          "text": "Check designated bays and work areas are properly marked. [Reference / Source: Physical Observation]"
-        }
-      ]
-    },
-    {
-      "category_id": "cat_20_ev_specialised_",
-      "name": "EV / Specialised Bay (If Applicable)",
-      "items": [
-        {
-          "item_id": "cat_20_ev_specialised__1",
-          "text": "Check EV / specialised vehicle is handled only in designated bay. [Reference / Source: EV Bay / Physical Observation]"
-        },
-        {
-          "item_id": "cat_20_ev_specialised__2",
-          "text": "Check only trained / authorised staff work on high-voltage vehicle systems. [Reference / Source: Training Record / Technician Allocation]"
-        },
-        {
-          "item_id": "cat_20_ev_specialised__3",
-          "text": "Check required EV safety PPE and insulated tools are available. [Reference / Source: EV Bay / Tool Inventory / Physical Observation]"
-        },
-        {
-          "item_id": "cat_20_ev_specialised__4",
-          "text": "Check high-voltage isolation / safety procedure is followed before repair. [Reference / Source: EV Safety Checklist / Job Card]"
-        },
-        {
-          "item_id": "cat_20_ev_specialised__5",
-          "text": "Check EV charging activity is recorded and controlled. [Reference / Source: Charging Log / EV Charging Area]"
+          "text": "Check designated bays and work areas are properly marked. [Reference: Physical Observation]"
         }
       ]
     }

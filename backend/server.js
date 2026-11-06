@@ -1463,7 +1463,8 @@ app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
   doc.fillColor(statusColor).font('Helvetica-Bold').fontSize(13).text(`AUDIT COMPLIANCE STATUS:    ${audit.status.toUpperCase()}`, 55, 214, { width: 480 });
 
   let y = 255;
-  doc.fillColor('#0047AB').font('Helvetica-Bold').fontSize(12).text('CATEGORY PERFORMANCE BREAKDOWN (20 PILLARS)', 40, y);
+  const pillarCount = (audit.category_scores || []).length || 19;
+  doc.fillColor('#0047AB').font('Helvetica-Bold').fontSize(12).text(`CATEGORY PERFORMANCE BREAKDOWN (${pillarCount} PILLARS)`, 40, y);
   y += 20;
 
   (audit.category_scores || []).forEach(cs => {

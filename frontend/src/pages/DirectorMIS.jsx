@@ -396,7 +396,7 @@ export default function DirectorMIS() {
         <div>
           <div className="font-bold text-sm text-foreground">Need detailed branch-by-branch analysis?</div>
           <div className="text-xs text-muted-foreground">
-            Explore 20-pillar operational benchmarking radars and dedicated profiles for each dealership.
+            Explore operational pillar benchmarking radars and dedicated profiles for each dealership.
           </div>
         </div>
         <div className="flex items-center gap-3">

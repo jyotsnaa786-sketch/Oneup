@@ -122,7 +122,7 @@ export default function BranchScorecards() {
             Branch-Wise Audit Scorecards
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            In-depth compliance profiles, historical trajectory charts, 20-pillar performance benchmarks, and active remediation workflows across all 7 OneUP locations.
+            In-depth compliance profiles, historical trajectory charts, operational pillar performance benchmarks, and active remediation workflows across all 7 OneUP locations.
           </p>
         </div>
 
@@ -346,13 +346,13 @@ export default function BranchScorecards() {
             </div>
           </div>
 
-          {/* 20 Pillar Operational Radar / Breakdown */}
+          {/* Operational Pillars Breakdown */}
           <div className="border border-border bg-white p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
               <div>
                 <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-bold">Comprehensive Evaluation</div>
                 <h3 className="font-display text-xl font-black uppercase tracking-tight">
-                  20-Pillar Operational Performance Breakdown
+                  Operational Pillar Performance Breakdown
                 </h3>
               </div>
               <span className="text-xs font-mono text-muted-foreground">

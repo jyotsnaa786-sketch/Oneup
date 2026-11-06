@@ -136,7 +136,7 @@ export default function Dashboard() {
             </div>
 
             <div className="lg:col-span-6 border border-border bg-white p-6 shadow-xs">
-              <h3 className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground mb-6">20 Pillar Category Averages (%)</h3>
+              <h3 className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground mb-6">Operational Category Performance Averages (%)</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={stats.category_averages} layout="vertical" margin={{ left: 20, right: 16 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" horizontal={false} />
