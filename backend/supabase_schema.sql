@@ -100,3 +100,20 @@ CREATE INDEX IF NOT EXISTS idx_capa_tasks_status ON capa_tasks(status);
 CREATE INDEX IF NOT EXISTS idx_capa_tasks_severity ON capa_tasks(severity);
 CREATE INDEX IF NOT EXISTS idx_capa_tasks_branch ON capa_tasks(dealership_name);
 CREATE INDEX IF NOT EXISTS idx_drafts_user ON audit_drafts(user_id);
+
+-- Enable RLS with Permissive Enterprise Policies
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE capa_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_drafts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_state ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations for branches" ON branches FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations for users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations for audits" ON audits FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations for capa_tasks" ON capa_tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations for audit_drafts" ON audit_drafts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations for audit_templates" ON audit_templates FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations for system_state" ON system_state FOR ALL USING (true) WITH CHECK (true);
