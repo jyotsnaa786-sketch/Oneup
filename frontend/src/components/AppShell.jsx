@@ -31,14 +31,14 @@ export default function AppShell({ children }) {
     { to: "/audits/new", label: "Run OneUP Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: !isDirector, isAction: true },
   ].filter(item => item.allow);
 
-  // Clean 6-tab mobile navigation
+  // Clean 6-tab mobile navigation with direct Drafts & Logout
   const mobileItems = [
     { to: "/", label: "Hub", icon: Gauge },
     { to: "/mis", label: "MIS", icon: ChartPieSlice },
-    { to: "/scorecards", label: "Branches", icon: Buildings },
     { to: "/audits/new", label: "Run Audit", icon: PlusCircle, highlight: true },
-    { to: "/audits", label: "Vault", icon: ClipboardText },
+    { to: "/drafts", label: "Drafts", icon: FileDashed },
     { to: "/tasks", label: "CAPA", icon: WarningCircle },
+    { to: "/logout", label: "Logout", icon: SignOut, isLogout: true },
   ];
 
   return (
@@ -110,10 +110,11 @@ export default function AppShell({ children }) {
             <button
               onClick={handleLogout}
               data-testid="logout-button"
-              className="w-8 h-8 border border-border flex items-center justify-center hover:bg-foreground hover:text-white transition-colors shrink-0"
-              title="Log out"
+              className="h-9 px-3 border border-red-300 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 shadow-xs rounded-xs"
+              title="Log out of OneUP Motors system"
             >
-              <SignOut size={16} />
+              <SignOut weight="bold" size={16} />
+              <span className="inline">Logout</span>
             </button>
           </div>
         </div>
@@ -133,10 +134,11 @@ export default function AppShell({ children }) {
               <button
                 key="mobile-logout"
                 onClick={handleLogout}
-                className="flex flex-col items-center justify-center h-full py-1 text-muted-foreground hover:text-destructive transition-colors w-full overflow-hidden"
+                className="flex flex-col items-center justify-center h-full py-1 text-red-600 hover:bg-red-50 transition-colors w-full overflow-hidden"
+                title="Log Out"
               >
-                <Icon size={20} />
-                <span className="text-[9px] tracking-wider uppercase mt-1 truncate max-w-full px-1">Logout</span>
+                <Icon weight="bold" size={20} />
+                <span className="text-[10px] font-bold tracking-wider uppercase mt-0.5 truncate max-w-full px-0.5">Logout</span>
               </button>
             );
           }

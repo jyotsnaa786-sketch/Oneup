@@ -166,17 +166,35 @@ export default function NewAudit() {
       }
 
       // If user came to Run New Audit fresh, KEEP THE FORM COMPLETELY CLEAN!
-      // Do not auto-populate inputs. Check if server has a recent active draft and offer optional resume.
+      // Check server and local cache for any active drafts and offer prominent one-click resume.
       try {
         const dr = await api.get("/drafts");
         if (Array.isArray(dr.data) && dr.data.length > 0) {
-          const serverDraft = dr.data[0];
-          // Filter out obsolete 2026-10-22 Malihabad draft
-          if (serverDraft && serverDraft.meta?.audit_date !== "2026-10-22" && Object.keys(serverDraft.state || {}).length > 0) {
-            setPendingDraftPrompt(serverDraft);
+          const validDrafts = dr.data.filter(
+            (d) => d && d.meta?.audit_date !== "2026-10-22" && Object.keys(d.state || {}).length > 0
+          );
+          if (validDrafts.length > 0) {
+            validDrafts.sort((a, b) => Object.keys(b.state || {}).length - Object.keys(a.state || {}).length);
+            setPendingDraftPrompt(validDrafts[0]);
           }
         }
       } catch (e) {}
+
+      // Fallback: check device local storage if no server draft prompt set
+      const saved = localStorage.getItem("oneup_audit_draft");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.meta?.audit_date !== "2026-10-22" && Object.keys(parsed.state || {}).length > 0) {
+            setPendingDraftPrompt((prev) => {
+              if (!prev || Object.keys(parsed.state || {}).length > Object.keys(prev.state || {}).length) {
+                return parsed;
+              }
+              return prev;
+            });
+          }
+        } catch (e) {}
+      }
 
       setIsInitialized(true);
     }).catch(() => {
@@ -197,7 +215,9 @@ export default function NewAudit() {
     else setStep(1);
     setPendingDraftPrompt(null);
     localStorage.setItem("oneup_audit_draft", JSON.stringify(d));
-    toast.success("📝 Inspection Draft Loaded!");
+    const itemsCount = Object.keys(d.state || {}).length;
+    const photoCount = countDraftEvidence(d.state);
+    toast.success(`📝 Restored Draft: ${d.meta?.dealership_name || "OneUP Motors"} (${itemsCount} items evaluated, ${photoCount} photos)`);
   };
 
   const discardDraft = (targetDraft) => {
@@ -235,12 +255,17 @@ export default function NewAudit() {
   // Debounced auto-save effect
   useEffect(() => {
     if (!isInitialized || !template) return;
-    const hasProgress = (meta.dealership_name && meta.dealership_name.trim().length > 0) || Object.keys(state).length > 0;
-    if (!hasProgress) return;
+    // CRITICAL: Do NOT auto-save if an existing draft prompt is awaiting user decision
+    if (pendingDraftPrompt) return;
+
+    // Only auto-save if at least one evaluation item is answered
+    const itemsCount = Object.keys(state).length;
+    if (itemsCount === 0) return;
 
     const timer = setTimeout(() => {
       const nowStr = new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
       const payload = {
+        id: draftInfo?.id || undefined,
         meta,
         state,
         general,
@@ -254,7 +279,7 @@ export default function NewAudit() {
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [meta, state, general, step, isInitialized, template]);
+  }, [meta, state, general, step, isInitialized, template, pendingDraftPrompt, draftInfo]);
 
   // Save on page exit / unload
   useEffect(() => {
@@ -414,45 +439,50 @@ export default function NewAudit() {
             )}
 
             {pendingDraftPrompt && (
-              <div className="mb-5 bg-amber-50 border-2 border-amber-500 p-4 shadow-sm animate-fade-up">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="mb-6 bg-amber-50 border-2 border-amber-500 p-4 sm:p-5 shadow-md animate-fade-up">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="bg-amber-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest">
-                        Saved Draft Found
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="bg-amber-600 text-white text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-widest flex items-center gap-1 shadow-xs">
+                        ⚠️ UNFINISHED DRAFT IN PROGRESS
                       </span>
-                      <span className="text-xs font-mono text-amber-900 font-semibold">
-                        {pendingDraftPrompt.timestamp || "Recently saved"}
+                      <span className="text-xs font-mono text-amber-900 font-bold">
+                        {pendingDraftPrompt.timestamp || "Auto-saved"}
                       </span>
                     </div>
-                    <div className="text-sm font-bold text-amber-950">
-                      Unfinished inspection draft found for{" "}
-                      <span className="underline">{pendingDraftPrompt.meta?.dealership_name || "OneUP Motors"}</span> (
-                      {Object.keys(pendingDraftPrompt.state || {}).length} items evaluated
-                      {countDraftEvidence(pendingDraftPrompt.state) > 0 ? `, ${countDraftEvidence(pendingDraftPrompt.state)} photos` : ""}).
+                    <div className="text-base font-black text-amber-950">
+                      {pendingDraftPrompt.meta?.dealership_name || "OneUP Motors"}{" "}
+                      {pendingDraftPrompt.meta?.location ? `(${pendingDraftPrompt.meta.location})` : ""}
                     </div>
+                    <p className="text-xs text-amber-900 mt-0.5 font-medium">
+                      Contains <strong className="font-bold underline">{Object.keys(pendingDraftPrompt.state || {}).length} graded checklist items</strong>
+                      {countDraftEvidence(pendingDraftPrompt.state) > 0 ? ` and ${countDraftEvidence(pendingDraftPrompt.state)} defect photos` : ""}.
+                      Resume now to continue without re-entering evaluations.
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => restoreDraft(pendingDraftPrompt)}
-                      className="h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all active:scale-95"
+                      className="h-10 px-5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95"
                     >
-                      Resume Draft
+                      ▶ Resume This Draft
                     </button>
                     <button
                       type="button"
                       onClick={() => discardDraft(pendingDraftPrompt)}
-                      className="h-9 px-3 bg-white border border-red-300 text-red-700 hover:bg-red-50 font-bold text-xs uppercase tracking-wider transition-colors"
+                      className="h-10 px-3 bg-white border border-red-300 text-red-700 hover:bg-red-50 font-bold text-xs uppercase tracking-wider transition-colors"
+                      title="Discard and delete draft"
                     >
                       Discard
                     </button>
                     <button
                       type="button"
                       onClick={() => setPendingDraftPrompt(null)}
-                      className="h-9 px-3 border border-border bg-white text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-wider transition-colors"
+                      className="h-10 px-3 border border-border bg-white text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-wider transition-colors"
+                      title="Start fresh without discarding"
                     >
-                      Start Clean
+                      Dismiss
                     </button>
                   </div>
                 </div>

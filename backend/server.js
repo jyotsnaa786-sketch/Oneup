@@ -851,8 +851,10 @@ app.get('/api/drafts', authMiddleware, (req, res) => {
 
 app.post('/api/drafts', authMiddleware, preventDirectorEdits, (req, res) => {
   if (!Array.isArray(db.drafts)) db.drafts = [];
-  const { meta, state, general, step, timestamp, id } = req.body;
+  const { meta, state, general, step, timestamp, id, force_overwrite } = req.body;
   const draftId = id || (req.user ? req.user.id : 'default_draft');
+  const incomingItemsCount = Object.keys(state || {}).length;
+
   const draftDoc = {
     id: draftId,
     user_id: req.user ? req.user.id : 'unknown',
@@ -865,8 +867,23 @@ app.post('/api/drafts', authMiddleware, preventDirectorEdits, (req, res) => {
     updated_at: new Date().toISOString()
   };
 
-  const existingIdx = db.drafts.findIndex(d => d.id === draftId || d.user_id === draftDoc.user_id);
+  const existingIdx = db.drafts.findIndex(d => d.id === draftId || (d.user_id === draftDoc.user_id && !d.id.startsWith("krishna_nagar")));
   if (existingIdx !== -1) {
+    const existing = db.drafts[existingIdx];
+    const existingItemsCount = Object.keys(existing.state || {}).length;
+
+    // Safety guard: if existing draft has evaluations and incoming draft is blank/empty, DO NOT wipe it out unless forced
+    if (existingItemsCount > 0 && incomingItemsCount === 0 && !force_overwrite) {
+      return res.json({
+        ...existing,
+        _protected: true,
+        message: "Protected existing draft with evaluation data"
+      });
+    }
+
+    if (existing.id && !id) {
+      draftDoc.id = existing.id;
+    }
     db.drafts[existingIdx] = draftDoc;
   } else {
     db.drafts.unshift(draftDoc);

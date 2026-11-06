@@ -75,22 +75,26 @@ export default function DirectorMIS() {
   }
 
   const {
-    network_compliance_index,
-    total_audits,
-    total_open_capa,
-    total_overdue_capa,
-    total_p0_critical,
-    branch_leaderboard = [],
-    risk_heatmap = [],
-    ageing_breakdown = {},
-    monthly_trends = []
-  } = data;
+    network_compliance_index = 0,
+    total_audits = 0,
+    total_open_capa = 0,
+    total_overdue_capa = 0,
+    total_p0_critical = 0,
+    branch_leaderboard: branchLeaderboard = [],
+    risk_heatmap: riskHeatmap = [],
+    ageing_breakdown: ageingBreakdown = {},
+    monthly_trends: monthlyTrends = []
+  } = data || {};
+
+  const safeBranchLeaderboard = Array.isArray(branchLeaderboard) ? branchLeaderboard : [];
+  const safeRiskHeatmap = Array.isArray(riskHeatmap) ? riskHeatmap : [];
+  const safeMonthlyTrends = Array.isArray(monthlyTrends) ? monthlyTrends : [];
 
   const ageingData = [
-    { name: "On Track", count: ageing_breakdown.on_track || 0, fill: "#059669" },
-    { name: "1-7d Overdue", count: ageing_breakdown.overdue_1_7 || 0, fill: "#EAB308" },
-    { name: "8-15d Overdue", count: ageing_breakdown.overdue_8_15 || 0, fill: "#F97316" },
-    { name: ">15d Overdue", count: ageing_breakdown.overdue_gt_15 || 0, fill: "#DC2626" }
+    { name: "On Track", count: ageingBreakdown?.on_track || 0, fill: "#059669" },
+    { name: "1-7d Overdue", count: ageingBreakdown?.overdue_1_7 || 0, fill: "#EAB308" },
+    { name: "8-15d Overdue", count: ageingBreakdown?.overdue_8_15 || 0, fill: "#F97316" },
+    { name: ">15d Overdue", count: ageingBreakdown?.overdue_gt_15 || 0, fill: "#DC2626" }
   ];
 
   return (
@@ -193,7 +197,7 @@ export default function DirectorMIS() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {branchLeaderboard.map((branch, idx) => {
+                {safeBranchLeaderboard.map((branch, idx) => {
                   const isTop = idx === 0 && branch.latest_score !== null;
                   return (
                     <tr
@@ -311,7 +315,7 @@ export default function DirectorMIS() {
           </div>
 
           {/* Monthly Trajectory */}
-          {monthlyTrends.length > 0 && (
+          {safeMonthlyTrends.length > 0 && (
             <div className="border border-border bg-white p-6 shadow-xs">
               <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-bold mb-1">
                 Historical Progress
@@ -321,7 +325,7 @@ export default function DirectorMIS() {
               </h3>
               <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyTrends} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                  <AreaChart data={safeMonthlyTrends} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                     <XAxis dataKey="month" tick={{ fontSize: 9, fontFamily: "IBM Plex Mono" }} stroke="#9CA3AF" />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 9, fontFamily: "IBM Plex Mono" }} stroke="#9CA3AF" />
@@ -351,13 +355,13 @@ export default function DirectorMIS() {
           </span>
         </div>
 
-        {riskHeatmap.length === 0 ? (
+        {safeRiskHeatmap.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground text-sm">
             No recurring non-compliances logged across inspections.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {riskHeatmap.map((item, idx) => (
+            {safeRiskHeatmap.map((item, idx) => (
               <div
                 key={idx}
                 className="border border-border/80 p-4 bg-muted/20 hover:border-primary/50 transition-all flex flex-col justify-between"

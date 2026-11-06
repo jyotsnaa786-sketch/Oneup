@@ -35,24 +35,39 @@ export default function Drafts() {
       console.warn("Could not reach server drafts:", e.message);
     }
 
-    // 2. Try local storage draft
+    // 2. Try local storage draft (merge or pick the one with most progress)
     const saved = localStorage.getItem("oneup_audit_draft");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed && (parsed.meta || parsed.state)) {
           const localId = parsed.id || parsed.user_id || "local_draft";
-          if (!seenIds.has(localId)) {
+          const existingIdx = combined.findIndex((c) => (c.id && c.id === localId) || (c.user_id && c.user_id === localId));
+          if (existingIdx >= 0) {
+            const existingCount = Object.keys(combined[existingIdx].state || {}).length;
+            const localCount = Object.keys(parsed.state || {}).length;
+            if (localCount > existingCount) {
+              combined[existingIdx] = {
+                ...parsed,
+                isServer: combined[existingIdx].isServer,
+                isLocal: true,
+                key: localId
+              };
+            }
+          } else {
             combined.push({
               ...parsed,
               id: localId,
               isLocal: true,
-              key: "local_draft"
+              key: localId
             });
           }
         }
       } catch (e) {}
     }
+
+    // Sort to place drafts with actual evaluated items first
+    combined.sort((a, b) => Object.keys(b.state || {}).length - Object.keys(a.state || {}).length);
 
     setDraftsList(combined);
     setLoading(false);
