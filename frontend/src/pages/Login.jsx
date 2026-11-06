@@ -274,7 +274,7 @@ export default function Login() {
             Standardized inspections. Verifiable 100% compliance.
           </h2>
           <p className="text-white/70 text-sm mt-4 max-w-sm">
-            Score all 19 operational pillars and 128 checkpoints across workshop bays, genuine MGP inventory, and statutory safety.
+            Score all 20 operational pillars across workshop bays, genuine MGP inventory, and statutory safety.
           </p>
         </div>
       </div>

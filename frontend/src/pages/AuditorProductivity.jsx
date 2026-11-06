@@ -96,7 +96,7 @@ export default function AuditorProductivity() {
             <CheckSquare size={20} className="text-emerald-600" />
           </div>
           <div className="font-display text-4xl font-black tracking-tight">{total_audits_logged}</div>
-          <div className="text-xs text-muted-foreground mt-2 font-mono">Comprehensive 19-pillar audits</div>
+          <div className="text-xs text-muted-foreground mt-2 font-mono">Comprehensive 20-pillar audits</div>
         </div>
 
         <div className="border border-border p-6 bg-white shadow-xs">

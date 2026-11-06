@@ -275,7 +275,20 @@ function saveDB() {
   syncToCloudDatabase().catch(() => {});
 }
 
+const TEMPLATE_JSON_PATH = path.join(DATA_DIR, 'template_source.json');
+
 function ensureTemplateLoaded() {
+  if (fs.existsSync(TEMPLATE_JSON_PATH)) {
+    try {
+      const src = JSON.parse(fs.readFileSync(TEMPLATE_JSON_PATH, 'utf8'));
+      if (Array.isArray(src) && src.length > 0) {
+        db.template = src;
+        const totalItems = src.reduce((acc, c) => acc + (c.items || []).length, 0);
+        console.log(`✅ Loaded official 20-pillar audit template (${src.length} pillars, ${totalItems} items) from template_source.json`);
+        return;
+      }
+    } catch (e) {}
+  }
   const totalItems = (db.template || []).reduce((acc, c) => acc + (c.items || []).length, 0);
   if (db.template && db.template.length > 0 && totalItems > 0) return;
   console.log("⚠️ Template empty or missing items in memory! Auto-recovering template checklist items...");
