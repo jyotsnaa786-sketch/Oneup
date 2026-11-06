@@ -3,6 +3,7 @@ import { api, getHostBase } from "@/lib/apiClient";
 import AppShell from "@/components/AppShell";
 import PhotoAnnotator from "@/components/PhotoAnnotator";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { scoreColor } from "@/components/StatusBits";
 import { Check, X, MinusCircle, ArrowLeft, ArrowRight, FloppyDisk, ImageSquare, Lightning, Camera, FileImage, PaperPlaneRight, PaintBrush, Trash } from "@phosphor-icons/react";
@@ -102,10 +103,16 @@ function countDraftEvidence(st) {
 export default function NewAudit() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [template, setTemplate] = useState(null);
-  const [meta, setMeta] = useState({ dealership_name: "OneUP Motors Nexa", location: "Jaipur, Rajasthan", auditor_name: "OneUP Field Inspector", audit_date: new Date().toISOString().slice(0, 10) });
+  const [meta, setMeta] = useState({
+    dealership_name: "",
+    location: "",
+    auditor_name: user?.name || "Jitendra",
+    audit_date: new Date().toISOString().slice(0, 10)
+  });
   const [state, setState] = useState({});
-  const [general, setGeneral] = useState("All 20 operational sections verified compliant against OneUP Motors inspection standards.");
+  const [general, setGeneral] = useState("");
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(null);
@@ -117,13 +124,33 @@ export default function NewAudit() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState(null);
 
+  // Sync auditor name with authenticated user if empty
+  useEffect(() => {
+    if (user?.name && !meta.auditor_name) {
+      setMeta((m) => ({ ...m, auditor_name: user.name }));
+    }
+  }, [user]);
+
+  // Purge any old submitted Malihabad October 22 draft from local storage cache
+  useEffect(() => {
+    const saved = localStorage.getItem("oneup_audit_draft");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.meta?.audit_date === "2026-10-22" || parsed?.meta?.location?.toLowerCase() === "malihabad") {
+          localStorage.removeItem("oneup_audit_draft");
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     api.get("/audit-template").then(async (r) => {
       if (!isMounted) return;
       setTemplate(r.data);
 
-      // Check if user came from Drafts page explicitly to resume
+      // Explicit resume requested from Drafts page
       const incomingResumeDraft = location.state?.resumeDraft && location.state?.draft;
       if (incomingResumeDraft) {
         const d = location.state.draft;
@@ -134,37 +161,23 @@ export default function NewAudit() {
         if (typeof d.step === "number") setStep(Math.max(1, d.step));
         else setStep(1);
         setIsInitialized(true);
-        toast.success(`📝 Active Draft Resumed: ${d.meta?.dealership_name || "Inspection"}`);
+        toast.success(`📝 Draft Resumed: ${d.meta?.dealership_name || "Inspection"}`);
         return;
       }
 
-      // Check if candidate draft exists in local storage or server
-      let candidateDraft = null;
-      const saved = localStorage.getItem("oneup_audit_draft");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && (parsed.meta || Object.keys(parsed.state || {}).length > 0)) {
-            candidateDraft = parsed;
-          }
-        } catch (e) {}
-      }
-
+      // If user came to Run New Audit fresh, KEEP THE FORM COMPLETELY CLEAN!
+      // Do not auto-populate inputs. Check if server has a recent active draft and offer optional resume.
       try {
         const dr = await api.get("/drafts");
         if (Array.isArray(dr.data) && dr.data.length > 0) {
           const serverDraft = dr.data[0];
-          if (serverDraft && (serverDraft.meta || Object.keys(serverDraft.state || {}).length > 0)) {
-            if (!candidateDraft || Object.keys(serverDraft.state || {}).length >= Object.keys(candidateDraft.state || {}).length) {
-              candidateDraft = serverDraft;
-            }
+          // Filter out obsolete 2026-10-22 Malihabad draft
+          if (serverDraft && serverDraft.meta?.audit_date !== "2026-10-22" && Object.keys(serverDraft.state || {}).length > 0) {
+            setPendingDraftPrompt(serverDraft);
           }
         }
       } catch (e) {}
 
-      if (candidateDraft && (Object.keys(candidateDraft.state || {}).length > 0 || (candidateDraft.meta?.dealership_name && candidateDraft.meta?.dealership_name !== "OneUP Motors Nexa"))) {
-        setPendingDraftPrompt(candidateDraft);
-      }
       setIsInitialized(true);
     }).catch(() => {
       if (isMounted) toast.error("Failed to load audit template. Please refresh.");
@@ -200,13 +213,29 @@ export default function NewAudit() {
     setPendingDraftPrompt(null);
     setState({});
     setStep(0);
-    toast.info("🗑️ Draft discarded. Starting clean inspection.");
+    toast.info("🗑️ Draft discarded. Form is clean.");
+  };
+
+  const startCleanAudit = () => {
+    localStorage.removeItem("oneup_audit_draft");
+    setDraftInfo(null);
+    setPendingDraftPrompt(null);
+    setMeta({
+      dealership_name: "",
+      location: "",
+      auditor_name: user?.name || "Jitendra",
+      audit_date: new Date().toISOString().slice(0, 10)
+    });
+    setState({});
+    setGeneral("");
+    setStep(0);
+    toast.info("✨ Form reset to blank. Starting fresh inspection.");
   };
 
   // Debounced auto-save effect
   useEffect(() => {
     if (!isInitialized || !template) return;
-    const hasProgress = step > 0 || Object.keys(state).length > 0 || (meta.dealership_name && meta.dealership_name !== "OneUP Motors Nexa");
+    const hasProgress = (meta.dealership_name && meta.dealership_name.trim().length > 0) || Object.keys(state).length > 0;
     if (!hasProgress) return;
 
     const timer = setTimeout(() => {
@@ -222,7 +251,7 @@ export default function NewAudit() {
       api.post("/drafts", payload).then(() => {
         setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }).catch(() => {});
-    }, 500);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [meta, state, general, step, isInitialized, template]);
@@ -490,7 +519,41 @@ export default function NewAudit() {
 
             {isMeta && (
               <div className="border border-border bg-white p-4 sm:p-8 animate-fade-up w-full max-w-full overflow-hidden" data-testid="audit-meta-form">
-                <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight mb-4">Dealership &amp; Auditor Header</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                  <div>
+                    <h3 className="font-display text-lg sm:text-xl font-bold tracking-tight">Dealership &amp; Auditor Header</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Enter dealership branch and field inspector details for this inspection.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={startCleanAudit}
+                    className="text-xs font-mono font-bold text-muted-foreground hover:text-red-700 underline flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    Clear Form / Start Fresh
+                  </button>
+                </div>
+                <div className="mb-4">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold block mb-1.5">Quick Select Branch Preset:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: "OneUP Motors - Krishna-nagar", loc: "Krishna Nagar, Lucknow" },
+                      { name: "OneUP Motors - Mahanagar", loc: "Mahanagar, Lucknow" },
+                      { name: "OneUP Motors - TP Nagar", loc: "Transport Nagar, Lucknow" },
+                      { name: "OneUP Motors - Banthra", loc: "Banthra, Lucknow" },
+                      { name: "OneUP Motors - Takrohi", loc: "Takrohi, Lucknow" },
+                      { name: "OneUP Motors Nexa", loc: "Bhitauli, Lucknow" },
+                    ].map((p) => (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => setMeta((m) => ({ ...m, dealership_name: p.name, location: p.loc }))}
+                        className="text-[11px] font-mono px-2.5 py-1 bg-muted/60 hover:bg-primary hover:text-white border border-border transition-colors font-bold"
+                      >
+                        {p.name.replace("OneUP Motors - ", "")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
                     { k: "dealership_name", label: "Dealership Name", ph: "e.g. OneUP Motors Nexa" },
