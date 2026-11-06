@@ -90,6 +90,15 @@ function computeScore(state, template) {
   return applicable ? Math.round((p / applicable) * 1000) / 10 : 0;
 }
 
+function countDraftEvidence(st) {
+  if (!st || typeof st !== "object") return 0;
+  let count = 0;
+  Object.values(st).forEach((v) => {
+    if (Array.isArray(v?.evidence)) count += v.evidence.length;
+  });
+  return count;
+}
+
 export default function NewAudit() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,84 +113,138 @@ export default function NewAudit() {
   const [annotateItem, setAnnotateItem] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [draftInfo, setDraftInfo] = useState(null);
+  const [pendingDraftPrompt, setPendingDraftPrompt] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
 
   useEffect(() => {
-    api.get("/audit-template").then((r) => {
+    let isMounted = true;
+    api.get("/audit-template").then(async (r) => {
+      if (!isMounted) return;
       setTemplate(r.data);
-      let targetDraft = null;
 
-      // 1. Try local storage draft
+      // Check if user came from Drafts page explicitly to resume
+      const incomingResumeDraft = location.state?.resumeDraft && location.state?.draft;
+      if (incomingResumeDraft) {
+        const d = location.state.draft;
+        setDraftInfo(d);
+        if (d.meta) setMeta(d.meta);
+        if (d.state) setState(d.state);
+        if (d.general) setGeneral(d.general);
+        if (typeof d.step === "number") setStep(Math.max(1, d.step));
+        else setStep(1);
+        setIsInitialized(true);
+        toast.success(`📝 Active Draft Resumed: ${d.meta?.dealership_name || "Inspection"}`);
+        return;
+      }
+
+      // Check if candidate draft exists in local storage or server
+      let candidateDraft = null;
       const saved = localStorage.getItem("oneup_audit_draft");
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.meta && parsed.state && Object.keys(parsed.state).length > 0) {
-            targetDraft = parsed;
+          if (parsed && (parsed.meta || Object.keys(parsed.state || {}).length > 0)) {
+            candidateDraft = parsed;
           }
         } catch (e) {}
       }
 
-      // 2. Fetch server-side drafts to ensure server draft is loaded if available
-      api.get("/drafts").then((dr) => {
-        let activeDraft = targetDraft;
+      try {
+        const dr = await api.get("/drafts");
         if (Array.isArray(dr.data) && dr.data.length > 0) {
           const serverDraft = dr.data[0];
-          if (serverDraft && serverDraft.state && Object.keys(serverDraft.state).length > 0) {
-            activeDraft = serverDraft;
+          if (serverDraft && (serverDraft.meta || Object.keys(serverDraft.state || {}).length > 0)) {
+            if (!candidateDraft || Object.keys(serverDraft.state || {}).length >= Object.keys(candidateDraft.state || {}).length) {
+              candidateDraft = serverDraft;
+            }
           }
         }
+      } catch (e) {}
 
-        if (activeDraft) {
-          setDraftInfo(activeDraft);
-          if (activeDraft.meta) setMeta(activeDraft.meta);
-          if (activeDraft.state) setState(activeDraft.state);
-          if (activeDraft.general) setGeneral(activeDraft.general);
-          setStep(1); // Jump to Section 1 so check items and evidence photos are immediately visible!
-          toast.success("📝 Active Draft Auto-Restored! 6 Evidence Photos loaded onto screen.");
-        }
-      }).catch(() => {
-        if (targetDraft) {
-          setDraftInfo(targetDraft);
-          if (targetDraft.meta) setMeta(targetDraft.meta);
-          if (targetDraft.state) setState(targetDraft.state);
-          if (targetDraft.general) setGeneral(targetDraft.general);
-          setStep(1);
-          toast.success("📝 Local Draft Loaded into form!");
-        }
-      });
-
+      if (candidateDraft && (Object.keys(candidateDraft.state || {}).length > 0 || (candidateDraft.meta?.dealership_name && candidateDraft.meta?.dealership_name !== "OneUP Motors Nexa"))) {
+        setPendingDraftPrompt(candidateDraft);
+      }
       setIsInitialized(true);
-    }).catch(() => toast.error("Failed to load template"));
+    }).catch(() => {
+      if (isMounted) toast.error("Failed to load audit template. Please refresh.");
+    });
+
+    return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (!isInitialized || !template) return;
-    const hasProgress = step > 0 || Object.keys(state).length > 0 || meta.dealership_name !== "OneUP Motors Nexa";
-    if (hasProgress) {
-      const payload = { meta, state, general, step, timestamp: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString() };
-      localStorage.setItem("oneup_audit_draft", JSON.stringify(payload));
-      api.post("/drafts", payload).catch(() => {});
-    }
-  }, [meta, state, general, step, isInitialized, template]);
-
-  const restoreDraft = () => {
-    if (!draftInfo) return;
-    if (draftInfo.meta) setMeta(draftInfo.meta);
-    if (draftInfo.state) setState(draftInfo.state);
-    if (draftInfo.general) setGeneral(draftInfo.general);
-    setStep(1);
-    toast.success("📝 Inspection Draft Restored successfully!");
+  const restoreDraft = (targetDraft) => {
+    const d = targetDraft || pendingDraftPrompt || draftInfo;
+    if (!d) return;
+    setDraftInfo(d);
+    if (d.meta) setMeta(d.meta);
+    if (d.state) setState(d.state);
+    if (d.general) setGeneral(d.general);
+    if (typeof d.step === "number") setStep(Math.max(1, d.step));
+    else setStep(1);
+    setPendingDraftPrompt(null);
+    localStorage.setItem("oneup_audit_draft", JSON.stringify(d));
+    toast.success("📝 Inspection Draft Loaded!");
   };
 
-  const discardDraft = () => {
+  const discardDraft = (targetDraft) => {
+    const d = targetDraft || pendingDraftPrompt || draftInfo;
+    const draftId = d?.id || d?.user_id;
     localStorage.removeItem("oneup_audit_draft");
-    api.delete("/drafts").catch(() => {});
+    if (draftId) {
+      api.delete(`/drafts?id=${encodeURIComponent(draftId)}`).catch(() => {});
+    } else {
+      api.delete("/drafts").catch(() => {});
+    }
     setDraftInfo(null);
+    setPendingDraftPrompt(null);
     setState({});
     setStep(0);
-    toast.info("🗑️ Old draft discarded. Starting clean survey.");
+    toast.info("🗑️ Draft discarded. Starting clean inspection.");
   };
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (!isInitialized || !template) return;
+    const hasProgress = step > 0 || Object.keys(state).length > 0 || (meta.dealership_name && meta.dealership_name !== "OneUP Motors Nexa");
+    if (!hasProgress) return;
+
+    const timer = setTimeout(() => {
+      const nowStr = new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
+      const payload = {
+        meta,
+        state,
+        general,
+        step,
+        timestamp: nowStr
+      };
+      localStorage.setItem("oneup_audit_draft", JSON.stringify(payload));
+      api.post("/drafts", payload).then(() => {
+        setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      }).catch(() => {});
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [meta, state, general, step, isInitialized, template]);
+
+  // Save on page exit / unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const hasProgress = step > 0 || Object.keys(state).length > 0;
+      if (hasProgress) {
+        const payload = {
+          meta,
+          state,
+          general,
+          step,
+          timestamp: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString()
+        };
+        localStorage.setItem("oneup_audit_draft", JSON.stringify(payload));
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [meta, state, general, step]);
 
   if (!template) return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
 
@@ -319,6 +382,52 @@ export default function NewAudit() {
                 onClose={() => { setAnnotateItem(null); setSelectedFile(null); }}
                 onSave={(annotatedFile, caption) => executeUpload(annotateItem, annotatedFile, caption)}
               />
+            )}
+
+            {pendingDraftPrompt && (
+              <div className="mb-5 bg-amber-50 border-2 border-amber-500 p-4 shadow-sm animate-fade-up">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="bg-amber-500 text-white text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest">
+                        Saved Draft Found
+                      </span>
+                      <span className="text-xs font-mono text-amber-900 font-semibold">
+                        {pendingDraftPrompt.timestamp || "Recently saved"}
+                      </span>
+                    </div>
+                    <div className="text-sm font-bold text-amber-950">
+                      Unfinished inspection draft found for{" "}
+                      <span className="underline">{pendingDraftPrompt.meta?.dealership_name || "OneUP Motors"}</span> (
+                      {Object.keys(pendingDraftPrompt.state || {}).length} items evaluated
+                      {countDraftEvidence(pendingDraftPrompt.state) > 0 ? `, ${countDraftEvidence(pendingDraftPrompt.state)} photos` : ""}).
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => restoreDraft(pendingDraftPrompt)}
+                      className="h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all active:scale-95"
+                    >
+                      Resume Draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => discardDraft(pendingDraftPrompt)}
+                      className="h-9 px-3 bg-white border border-red-300 text-red-700 hover:bg-red-50 font-bold text-xs uppercase tracking-wider transition-colors"
+                    >
+                      Discard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDraftPrompt(null)}
+                      className="h-9 px-3 border border-border bg-white text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-wider transition-colors"
+                    >
+                      Start Clean
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-5 animate-fade-up w-full max-w-full overflow-hidden">

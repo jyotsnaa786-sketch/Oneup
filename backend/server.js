@@ -84,11 +84,16 @@ async function initCloudDatabase() {
     const cloudRecord = await cloudDbCollection.findOne({ _id: "primary_database" });
     if (cloudRecord && cloudRecord.data) {
       console.log("☁️ Successfully restored permanent database state from MongoDB Cloud!");
+      const cloudTemplateItems = (cloudRecord.data.template || []).reduce((acc, c) => acc + (c.items || []).length, 0);
       db = { ...db, ...cloudRecord.data };
       if (!db.tasks) db.tasks = [];
       if (!db.template) db.template = [];
       if (!db.audits) db.audits = [];
       if (!db.users) db.users = [];
+      if (cloudTemplateItems === 0) {
+        console.warn("⚠️ Cloud template had 0 items. Ensuring template is loaded from backup...");
+        ensureTemplateLoaded();
+      }
       
       // Always reset login lockouts and ensure admin user has correct password
       db.login_attempts = {};
@@ -174,10 +179,23 @@ function saveDB() {
 }
 
 function ensureTemplateLoaded() {
-  if (db.template && db.template.length > 0) return;
-  console.log("⚠️ Template empty in memory! Auto-recovering from Physical Audit Chk Sheet.xlsx...");
+  const totalItems = (db.template || []).reduce((acc, c) => acc + (c.items || []).length, 0);
+  if (db.template && db.template.length > 0 && totalItems > 0) return;
+  console.log("⚠️ Template empty or missing items in memory! Auto-recovering template checklist items...");
   if (!fs.existsSync(EXCEL_PATH)) {
-    console.error("Physical Audit Chk Sheet.xlsx not found at:", EXCEL_PATH);
+    console.warn("Physical Audit Chk Sheet.xlsx not found at:", EXCEL_PATH);
+    if (fs.existsSync(DB_FILE)) {
+      try {
+        const fileData = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        const fileItems = (fileData.template || []).reduce((acc, c) => acc + (c.items || []).length, 0);
+        if (fileItems > 0) {
+          db.template = fileData.template;
+          saveDB();
+          console.log(`✅ Restored template with ${fileItems} items from db.json backup!`);
+          return;
+        }
+      } catch (e) {}
+    }
     return;
   }
   try {
@@ -597,6 +615,10 @@ app.put('/api/audit-template', authMiddleware, adminOnly, (req, res) => {
   if (!Array.isArray(req.body) || req.body.length === 0) {
     return res.status(400).json({ detail: "Invalid template format" });
   }
+  const totalItems = req.body.reduce((acc, c) => acc + ((c && c.items) ? c.items.length : 0), 0);
+  if (totalItems === 0) {
+    return res.status(400).json({ detail: "Cannot update template: At least 1 checklist question item is required" });
+  }
   db.template = req.body;
   saveDB();
   res.json({ message: "Template updated successfully", template: db.template });
@@ -611,6 +633,12 @@ app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
     categories.forEach(cat => {
       if (cat) cat.items = Array.isArray(cat.items) ? cat.items : Object.values(cat.items || {});
     });
+
+    const totalSubmittedItems = categories.reduce((acc, cat) => acc + ((cat && cat.items) ? cat.items.length : 0), 0);
+    if (totalSubmittedItems === 0) {
+      return res.status(400).json({ detail: "Cannot submit audit: Checklist template items are missing or empty." });
+    }
+
     const { overall, catScores } = computeScores(categories);
     const auditId = crypto.randomUUID();
     const doc = {
@@ -707,6 +735,8 @@ app.delete('/api/drafts', authMiddleware, preventDirectorEdits, (req, res) => {
   const targetId = req.query.id || (req.user ? req.user.id : null);
   if (targetId) {
     db.drafts = db.drafts.filter(d => d.id !== targetId && d.user_id !== targetId);
+  } else if (req.user) {
+    db.drafts = db.drafts.filter(d => d.user_id !== req.user.id && d.id !== req.user.id);
   } else {
     db.drafts = [];
   }
