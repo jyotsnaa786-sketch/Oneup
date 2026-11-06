@@ -57,8 +57,24 @@ if (!db.audits) db.audits = [];
 if (!db.users) db.users = [];
 
 // ============================================================================
-// --- FREE CLOUD DATABASE INTEGRATION (MongoDB Atlas / Persistent Storage) ---
+// --- SUPABASE & MONGODB CLOUD INTEGRATION ---
 // ============================================================================
+let supabaseClient = null;
+const SUPABASE_URL = process.env.SUPABASE_URL || null;
+const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+
+if (SUPABASE_URL && SUPABASE_KEY) {
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false }
+    });
+    console.log("⚡ Supabase Enterprise Cloud Client connected successfully!");
+  } catch (e) {
+    console.error("Supabase Client init warning:", e.message);
+  }
+}
+
 let mongoClient = null;
 let cloudDbCollection = null;
 let cloudMediaCollection = null;
@@ -124,6 +140,16 @@ async function initCloudDatabase() {
 }
 
 async function syncToCloudDatabase() {
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from('system_state').upsert([
+        { key: 'primary_database', payload: db, updated_at: new Date().toISOString() }
+      ], { onConflict: 'key' });
+    } catch (e) {
+      console.warn("Supabase system_state sync notice:", e.message);
+    }
+  }
+
   if (!cloudDbCollection) {
     lastCloudError = lastCloudError || "Sync skipped: MongoDB collection not connected.";
     return;
