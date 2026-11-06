@@ -5,7 +5,7 @@
       "email": "jyotsnaa786@gmail.com",
       "name": "Audit Admin",
       "role": "admin",
-      "password_hash": "$2a$10$diwX16Ex7rKGAjCZfqtGDuMddLhyhHrai0Ysj2s4GI4Cc8Ou3kg6O",
+      "password_hash": "$2a$10$6lDXpgN9s3BHSRs2yyBk3.qlX2DsgKdFdpEsxtXXm40lIeHv0I6ja",
       "created_at": "2026-08-01T04:40:01.385Z"
     },
     {
@@ -45,7 +45,7 @@
       "email": "cctv.audit@oneupmaruti.com",
       "name": "Jitendra",
       "role": "auditor",
-      "password_hash": "$2a$10$aLJ5mOoSMyE9v8dkj.P/H.gGLxmN7QrtHwcs8AvGhzSELvplV6bHS",
+      "password_hash": "$2a$10$ey3GD2R9Kt5nRvuVV1cVouDz0c02HhidQWbx8e3NysviBWy7q55lS",
       "created_at": "2026-08-27T05:48:55.093Z"
     },
     {
