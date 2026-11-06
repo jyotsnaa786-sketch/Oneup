@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line,
 } from "recharts";
-import { ClipboardText, TrendUp, CheckCircle, Warning, XCircle, PlusCircle, ArrowRight } from "@phosphor-icons/react";
+import { ClipboardText, TrendUp, CheckCircle, Warning, XCircle, PlusCircle, ArrowRight, ChartPieSlice, Buildings, ShieldWarning, Users } from "@phosphor-icons/react";
 
 function Metric({ label, value, sub, icon: Icon, accent }) {
   return (
@@ -44,13 +44,62 @@ export default function Dashboard() {
 
   return (
     <AppShell>
-      <div className="flex items-end justify-between mb-8 animate-fade-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 pb-6 border-b border-border animate-fade-up">
         <div>
-          <div className="font-mono text-[10px] tracking-[0.3em] uppercase text-accent mb-2">OneUP Motors Executive Protocol</div>
-          <h1 className="font-display text-4xl font-black tracking-tighter uppercase">After-Sales Surveillance Hub</h1>
+          <div className="font-mono text-[10px] tracking-[0.3em] uppercase text-accent mb-2 font-bold">OneUP Motors Executive Protocol</div>
+          <h1 className="font-display text-3xl sm:text-4xl font-black tracking-tighter uppercase">After-Sales Surveillance Hub</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Multi-branch enterprise governance and real-time operational compliance surveillance.</p>
         </div>
-        <Link to="/audits/new" data-testid="dashboard-new-audit" className="h-11 px-5 bg-primary text-white font-bold text-xs tracking-[0.2em] uppercase flex items-center gap-2 hover:bg-blue-800 transition-colors shadow-sm">
-          <PlusCircle weight="bold" size={16} /> Run OneUP Audit
+        <div className="flex items-center gap-2 shrink-0">
+          <Link to="/mis" className="h-10 px-4 border border-border bg-white text-foreground hover:bg-muted font-bold text-xs tracking-wider uppercase inline-flex items-center gap-2 transition-colors shadow-xs">
+            <ChartPieSlice size={16} /> Director MIS
+          </Link>
+          <Link to="/audits/new" data-testid="dashboard-new-audit" className="h-10 px-4 bg-primary text-white font-bold text-xs tracking-wider uppercase flex items-center gap-2 hover:bg-blue-800 transition-colors shadow-xs">
+            <PlusCircle weight="bold" size={16} /> Run OneUP Audit
+          </Link>
+        </div>
+      </div>
+
+      {/* Enterprise Executive Navigation Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 animate-fade-up">
+        <Link to="/mis" className="p-3.5 bg-white border border-border hover:border-primary/60 transition-all flex items-center gap-3 shadow-xs group">
+          <div className="w-10 h-10 rounded-xs bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 group-hover:bg-purple-100 transition-colors">
+            <ChartPieSlice weight="bold" size={20} />
+          </div>
+          <div>
+            <div className="font-bold text-xs uppercase tracking-wider text-foreground">Director MIS</div>
+            <div className="text-[10px] text-muted-foreground font-mono">Consolidated Cockpit</div>
+          </div>
+        </Link>
+
+        <Link to="/scorecards" className="p-3.5 bg-white border border-border hover:border-primary/60 transition-all flex items-center gap-3 shadow-xs group">
+          <div className="w-10 h-10 rounded-xs bg-blue-50 text-primary flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+            <Buildings weight="bold" size={20} />
+          </div>
+          <div>
+            <div className="font-bold text-xs uppercase tracking-wider text-foreground">Branch Scorecards</div>
+            <div className="text-[10px] text-muted-foreground font-mono">7 Dealership Portals</div>
+          </div>
+        </Link>
+
+        <Link to="/tasks" className="p-3.5 bg-white border border-border hover:border-primary/60 transition-all flex items-center gap-3 shadow-xs group">
+          <div className="w-10 h-10 rounded-xs bg-red-50 text-red-600 flex items-center justify-center shrink-0 group-hover:bg-red-100 transition-colors">
+            <ShieldWarning weight="bold" size={20} />
+          </div>
+          <div>
+            <div className="font-bold text-xs uppercase tracking-wider text-foreground">CAPA Action Tracker</div>
+            <div className="text-[10px] text-muted-foreground font-mono">{stats.open_tasks || 0} Open Actions</div>
+          </div>
+        </Link>
+
+        <Link to="/productivity" className="p-3.5 bg-white border border-border hover:border-primary/60 transition-all flex items-center gap-3 shadow-xs group">
+          <div className="w-10 h-10 rounded-xs bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-100 transition-colors">
+            <Users weight="bold" size={20} />
+          </div>
+          <div>
+            <div className="font-bold text-xs uppercase tracking-wider text-foreground">Auditor Productivity</div>
+            <div className="text-[10px] text-muted-foreground font-mono">Surveillance Rigor</div>
+          </div>
         </Link>
       </div>
 

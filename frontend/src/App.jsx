@@ -13,6 +13,9 @@ import TemplateEditor from "@/pages/TemplateEditor";
 import TaskList from "@/pages/TaskList";
 import AdminPortal from "@/pages/AdminPortal";
 import Drafts from "@/pages/Drafts";
+import DirectorMIS from "@/pages/DirectorMIS";
+import BranchScorecards from "@/pages/BranchScorecards";
+import AuditorProductivity from "@/pages/AuditorProductivity";
 
 function App() {
   return (
@@ -22,6 +25,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/mis" element={<ProtectedRoute><DirectorMIS /></ProtectedRoute>} />
+            <Route path="/scorecards" element={<ProtectedRoute><BranchScorecards /></ProtectedRoute>} />
+            <Route path="/productivity" element={<ProtectedRoute><AuditorProductivity /></ProtectedRoute>} />
             <Route path="/audits" element={<ProtectedRoute><AuditList /></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><TaskList /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPortal /></ProtectedRoute>} />

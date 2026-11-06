@@ -347,6 +347,144 @@ function statusFromScore(score) {
   return "Non-Compliant";
 }
 
+// ============================================================================
+// --- ENTERPRISE PLATFORM STANDARDIZATION & SEVERITY / AGEING ENGINE ---
+// ============================================================================
+const STANDARD_BRANCHES = [
+  { id: "krishna-nagar", name: "OneUP Motors - Krishna-nagar", location: "Krishna Nagar, Lucknow", code: "KN" },
+  { id: "mahanagar", name: "OneUP Motors - Mahanagar", location: "Mahanagar, Lucknow", code: "MN" },
+  { id: "tp-nagar", name: "OneUP Motors - TP Nagar", location: "Transport Nagar, Lucknow", code: "TP" },
+  { id: "banthra", name: "OneUP Motors - Banthra", location: "Banthra, Lucknow", code: "BN" },
+  { id: "takrohi", name: "OneUP Motors - Takrohi", location: "Takrohi, Lucknow", code: "TK" },
+  { id: "malihabad", name: "OneUP Motors - Malihabad", location: "Malihabad, Lucknow", code: "ML" },
+  { id: "nexa", name: "OneUP Motors Nexa", location: "Bhitauli, Lucknow", code: "NX" }
+];
+
+function normalizeBranch(dealershipName = "", location = "") {
+  const combined = (String(dealershipName || "") + " " + String(location || "")).toLowerCase();
+  if (combined.includes("krishna") || combined.includes("krishana")) return "OneUP Motors - Krishna-nagar";
+  if (combined.includes("mahanagar")) return "OneUP Motors - Mahanagar";
+  if (combined.includes("tp nagar") || combined.includes("transport")) return "OneUP Motors - TP Nagar";
+  if (combined.includes("banthra")) return "OneUP Motors - Banthra";
+  if (combined.includes("takrohi")) return "OneUP Motors - Takrohi";
+  if (combined.includes("malihabad")) return "OneUP Motors - Malihabad";
+  if (combined.includes("nexa") || combined.includes("bhitauli")) return "OneUP Motors Nexa";
+  return dealershipName ? dealershipName.trim() : "OneUP Motors";
+}
+
+function determineSeverity(categoryName = "", itemText = "") {
+  const combined = (String(categoryName || "") + " " + String(itemText || "")).toLowerCase();
+  
+  // P0 - CRITICAL: Direct safety hazards, fire risks, unrecorded vehicle damages, brake/steering, road test skips, gate pass violations
+  if (
+    combined.includes("fire") ||
+    combined.includes("safety") ||
+    combined.includes("hazard") ||
+    combined.includes("road test") ||
+    combined.includes("gate pass") ||
+    combined.includes("brake") ||
+    combined.includes("steering") ||
+    combined.includes("damage") ||
+    combined.includes("scratch") ||
+    combined.includes("customer property") ||
+    combined.includes("accident") ||
+    combined.includes("security") ||
+    combined.includes("emergency") ||
+    combined.includes("critical")
+  ) {
+    return {
+      code: "P0",
+      label: "Critical",
+      slaDays: 3,
+      slaDescription: "3 Days SLA (Mandatory Immediate Rectification)"
+    };
+  }
+
+  // P1 - MAJOR: Customer estimate approval, signatures, job card protocol, parts requisition, calibration, warranty non-compliance
+  if (
+    combined.includes("estimate") ||
+    combined.includes("approval") ||
+    combined.includes("signature") ||
+    combined.includes("job card") ||
+    combined.includes("requisition") ||
+    combined.includes("warranty") ||
+    combined.includes("calibration") ||
+    combined.includes("technician") ||
+    combined.includes("inventory") ||
+    combined.includes("delay") ||
+    combined.includes("pricing") ||
+    combined.includes("billing")
+  ) {
+    return {
+      code: "P1",
+      label: "Major",
+      slaDays: 7,
+      slaDescription: "7 Days SLA (Standard Remediation Window)"
+    };
+  }
+
+  // P2 - MINOR: Routine housekeeping, uniforms, signage, washrooms, scrap yard tidiness
+  return {
+    code: "P2",
+    label: "Minor",
+    slaDays: 14,
+    slaDescription: "14 Days SLA (Routine Facility Maintenance)"
+  };
+}
+
+function enrichTask(task) {
+  const sevInfo = determineSeverity(task.category_name, task.item_text);
+  const severity = task.severity || sevInfo.code;
+  const slaDays = task.sla_days || sevInfo.slaDays;
+
+  const createdAt = task.created_at ? new Date(task.created_at) : new Date();
+  const ageDays = Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)));
+
+  let dueDate = task.due_date;
+  if (!dueDate) {
+    const d = new Date(createdAt);
+    d.setDate(d.getDate() + slaDays);
+    dueDate = d.toISOString().slice(0, 10);
+  }
+
+  const dueTime = new Date(dueDate).getTime();
+  const nowTime = Date.now();
+  const isClosed = task.status === 'closed';
+  const isOverdue = !isClosed && (nowTime > dueTime);
+  const daysOverdue = isOverdue ? Math.max(1, Math.floor((nowTime - dueTime) / (1000 * 60 * 60 * 24))) : 0;
+
+  let slaBracket = "0-7 Days (On Track)";
+  if (isClosed) {
+    slaBracket = "Closed";
+  } else if (daysOverdue > 15) {
+    slaBracket = ">15 Days Overdue";
+  } else if (daysOverdue >= 8) {
+    slaBracket = "8-15 Days Overdue";
+  } else if (daysOverdue >= 1) {
+    slaBracket = "1-7 Days Overdue";
+  }
+
+  const canonicalBranch = normalizeBranch(task.dealership_name);
+
+  return {
+    ...task,
+    dealership_name: canonicalBranch,
+    severity,
+    severity_label: sevInfo.label,
+    sla_days: slaDays,
+    due_date: dueDate,
+    age_days: ageDays,
+    is_overdue: isOverdue,
+    days_overdue: daysOverdue,
+    sla_bracket: slaBracket,
+    rectification_evidence: task.rectification_evidence || [],
+    rectification_note: task.rectification_note || "",
+    verification_note: task.verification_note || "",
+    verified_by: task.verified_by || null,
+    closed_at: task.closed_at || null
+  };
+}
+
 function authMiddleware(req, res, next) {
   let token = req.cookies.access_token;
   if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
@@ -663,25 +801,32 @@ app.post('/api/audits', authMiddleware, preventDirectorEdits, (req, res) => {
       if (cat && Array.isArray(cat.items)) {
         cat.items.forEach(it => {
           if (it && it.result === "fail") {
+            const sev = determineSeverity(cat.name, it.text);
             const due = new Date();
-              due.setDate(due.getDate() + 7);
-              db.tasks.unshift({
-                id: crypto.randomUUID(),
-                audit_id: auditId,
-                dealership_name: dealership_name || "OneUP Motors",
-                category_name: cat.name || "",
-                item_id: it.item_id || "",
-                item_text: it.text || "",
-                note: it.note || "",
-                owner: "OneUP Service Manager",
-                due_date: due.toISOString().slice(0, 10),
-                status: "open",
-                created_at: new Date().toISOString()
-              });
-            }
-          });
-        }
-      });
+            due.setDate(due.getDate() + sev.slaDays);
+            db.tasks.unshift({
+              id: crypto.randomUUID(),
+              audit_id: auditId,
+              dealership_name: normalizeBranch(dealership_name, location),
+              category_name: cat.name || "",
+              item_id: it.item_id || "",
+              item_text: it.text || "",
+              note: it.note || "",
+              owner: "OneUP Service Manager",
+              severity: sev.code,
+              sla_days: sev.slaDays,
+              due_date: due.toISOString().slice(0, 10),
+              status: "open",
+              rectification_evidence: [],
+              rectification_note: "",
+              verification_note: "",
+              verified_by: null,
+              created_at: new Date().toISOString()
+            });
+          }
+        });
+      }
+    });
 
     // Clear draft for submitting user upon successful submission
     if (Array.isArray(db.drafts) && req.user) {
@@ -789,23 +934,30 @@ app.put('/api/audits/:id', authMiddleware, adminOnly, (req, res) => {
           if (it && it.result === "fail") {
             const existingTask = oldTasks.find(t => t.item_id === it.item_id);
             if (existingTask) {
-              existingTask.dealership_name = oldAudit.dealership_name;
+              existingTask.dealership_name = normalizeBranch(oldAudit.dealership_name, oldAudit.location);
               existingTask.note = it.note !== undefined ? it.note : existingTask.note;
               db.tasks.unshift(existingTask);
             } else {
+              const sev = determineSeverity(cat.name, it.text);
               const due = new Date();
-              due.setDate(due.getDate() + 7);
+              due.setDate(due.getDate() + sev.slaDays);
               db.tasks.unshift({
                 id: crypto.randomUUID(),
                 audit_id: oldAudit.id,
-                dealership_name: oldAudit.dealership_name,
+                dealership_name: normalizeBranch(oldAudit.dealership_name, oldAudit.location),
                 category_name: cat.name || "",
                 item_id: it.item_id || "",
                 item_text: it.text || "",
                 note: it.note || "",
                 owner: "OneUP Service Manager",
+                severity: sev.code,
+                sla_days: sev.slaDays,
                 due_date: due.toISOString().slice(0, 10),
                 status: "open",
+                rectification_evidence: [],
+                rectification_note: "",
+                verification_note: "",
+                verified_by: null,
                 created_at: new Date().toISOString()
               });
             }
@@ -831,31 +983,431 @@ app.delete('/api/audits/:id', authMiddleware, adminOnly, (req, res) => {
   res.json({ message: "deleted" });
 });
 
-// --- Action Tracker Routes ---
-app.get('/api/tasks', authMiddleware, (req, res) => {
-  res.json(db.tasks || []);
+// ============================================================================
+// --- ENTERPRISE CAPA LIFECYCLE & REMEDIATION WORKFLOW ENDPOINTS ---
+// ============================================================================
+app.get(['/api/tasks', '/api/capa'], authMiddleware, (req, res) => {
+  if (!Array.isArray(db.tasks)) db.tasks = [];
+  const enriched = db.tasks.map(enrichTask);
+  res.json(enriched);
+});
+
+app.post('/api/capa/:id/rectify', authMiddleware, preventDirectorEdits, (req, res) => {
+  if (!Array.isArray(db.tasks)) db.tasks = [];
+  const task = db.tasks.find(t => t.id === req.params.id);
+  if (!task) return res.status(404).json({ detail: "CAPA Task not found" });
+  const { rectification_note, rectification_evidence } = req.body;
+  if (!rectification_note || rectification_note.trim().length < 3) {
+    return res.status(400).json({ detail: "Mandatory Governance Rule: Detailed Rectification Note is required before submitting closure proof." });
+  }
+  task.rectification_note = rectification_note.trim();
+  if (Array.isArray(rectification_evidence)) {
+    task.rectification_evidence = rectification_evidence;
+  }
+  task.status = "rectified"; // Ready for auditor sign-off
+  task.rectified_at = new Date().toISOString();
+  task.rectified_by = req.user ? req.user.name : "Branch Service Manager";
+  saveDB();
+  res.json(enrichTask(task));
+});
+
+app.post('/api/capa/:id/verify', authMiddleware, preventDirectorEdits, (req, res) => {
+  if (!Array.isArray(db.tasks)) db.tasks = [];
+  const task = db.tasks.find(t => t.id === req.params.id);
+  if (!task) return res.status(404).json({ detail: "CAPA Task not found" });
+  const { approved, verification_note } = req.body;
+  
+  if (approved) {
+    task.status = "closed";
+    task.verification_note = (verification_note || "Rectification verified & approved.").trim();
+    task.verified_by = req.user ? req.user.name : "Inspector";
+    task.closed_at = new Date().toISOString();
+  } else {
+    task.status = "open";
+    task.verification_note = (verification_note || "Rectification rejected. Please re-verify and attach required proof.").trim();
+    task.rejection_count = (task.rejection_count || 0) + 1;
+  }
+  saveDB();
+  res.json(enrichTask(task));
 });
 
 app.patch('/api/tasks/:id', authMiddleware, preventDirectorEdits, (req, res) => {
-  const task = (db.tasks || []).find(t => t.id === req.params.id);
+  if (!Array.isArray(db.tasks)) db.tasks = [];
+  const task = db.tasks.find(t => t.id === req.params.id);
   if (!task) return res.status(404).json({ detail: "Task not found" });
-  const { owner, due_date, status, action_remark, follow_up_date } = req.body;
+  const { owner, due_date, status, action_remark, follow_up_date, severity, rectification_note, rectification_evidence, verification_note } = req.body;
 
-  // Enforce mandatory Action Taken Remarks when attempting to close a task
+  // Enforce mandatory Action Taken Remarks when attempting to close a task directly
   if (status === 'closed') {
-    const effectiveRemark = (action_remark !== undefined ? action_remark : (task.action_remark || "")).trim();
+    const effectiveRemark = (action_remark !== undefined ? action_remark : (task.action_remark || task.verification_note || task.rectification_note || "")).trim();
     if (effectiveRemark.length < 3) {
       return res.status(400).json({ detail: "Mandatory Governance Rule: Action Taken Remarks must be recorded before a defect task can be marked as closed!" });
     }
+    task.closed_at = task.closed_at || new Date().toISOString();
+    task.verified_by = task.verified_by || (req.user ? req.user.name : "Auditor");
   }
 
   if (owner !== undefined) task.owner = owner;
   if (due_date !== undefined) task.due_date = due_date;
+  if (severity !== undefined) task.severity = severity;
   if (action_remark !== undefined) task.action_remark = action_remark.trim();
+  if (rectification_note !== undefined) task.rectification_note = rectification_note.trim();
+  if (verification_note !== undefined) task.verification_note = verification_note.trim();
+  if (Array.isArray(rectification_evidence)) task.rectification_evidence = rectification_evidence;
   if (follow_up_date !== undefined) task.follow_up_date = follow_up_date;
   if (status !== undefined) task.status = status;
   saveDB();
-  res.json(task);
+  res.json(enrichTask(task));
+});
+
+// ============================================================================
+// --- ENTERPRISE AGGREGATION & REPORTING SUITE (DIRECTOR MIS & SCORECARDS) ---
+// ============================================================================
+
+// --- 1. Director-Level Consolidated MIS ---
+app.get('/api/reports/director-mis', authMiddleware, (req, res) => {
+  const audits = db.audits || [];
+  const tasks = (db.tasks || []).map(enrichTask);
+  const totalAudits = audits.length;
+
+  const avgNetworkScore = totalAudits > 0 
+    ? Math.round((audits.reduce((acc, a) => acc + (a.overall_score || 0), 0) / totalAudits) * 10) / 10 
+    : 0;
+
+  const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'rectified');
+  const overdueTasks = openTasks.filter(t => t.is_overdue);
+  const p0Critical = openTasks.filter(t => t.severity === 'P0');
+
+  // Branch Leaderboard across all 7 standard branches + any others in DB
+  const branchMap = {};
+  STANDARD_BRANCHES.forEach(sb => {
+    branchMap[sb.name] = {
+      id: sb.id,
+      name: sb.name,
+      location: sb.location,
+      code: sb.code,
+      audits: [],
+      open_capa: 0,
+      overdue_capa: 0,
+      p0_count: 0
+    };
+  });
+
+  audits.forEach(a => {
+    const cBranch = normalizeBranch(a.dealership_name, a.location);
+    if (!branchMap[cBranch]) {
+      branchMap[cBranch] = {
+        id: cBranch.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: cBranch,
+        location: a.location || "Lucknow",
+        code: "UP",
+        audits: [],
+        open_capa: 0,
+        overdue_capa: 0,
+        p0_count: 0
+      };
+    }
+    branchMap[cBranch].audits.push(a);
+  });
+
+  tasks.forEach(t => {
+    const cBranch = normalizeBranch(t.dealership_name);
+    if (branchMap[cBranch]) {
+      if (t.status !== 'closed') {
+        branchMap[cBranch].open_capa++;
+        if (t.is_overdue) branchMap[cBranch].overdue_capa++;
+        if (t.severity === 'P0') branchMap[cBranch].p0_count++;
+      }
+    }
+  });
+
+  const branchLeaderboard = Object.values(branchMap).map(b => {
+    const bAudits = b.audits.sort((x, y) => new Date(y.audit_date || y.created_at) - new Date(x.audit_date || x.created_at));
+    const bCount = bAudits.length;
+    const bAvg = bCount > 0 
+      ? Math.round((bAudits.reduce((acc, a) => acc + (a.overall_score || 0), 0) / bCount) * 10) / 10 
+      : 0;
+    const latestAudit = bAudits[0] || null;
+    const latestScore = latestAudit ? latestAudit.overall_score : null;
+    
+    let tier = "Uninspected";
+    if (latestScore !== null) {
+      if (latestScore >= 80) tier = "Compliant";
+      else if (latestScore >= 60) tier = "Marginal";
+      else tier = "Critical";
+    }
+
+    return {
+      id: b.id,
+      name: b.name,
+      location: b.location,
+      code: b.code,
+      audit_count: bCount,
+      avg_score: bAvg,
+      latest_score: latestScore,
+      latest_audit_date: latestAudit ? latestAudit.audit_date : "Pending",
+      status_tier: tier,
+      open_capa: b.open_capa,
+      overdue_capa: b.overdue_capa,
+      p0_count: b.p0_count,
+      score_history: bAudits.slice(0, 5).reverse().map(a => ({ date: a.audit_date, score: a.overall_score }))
+    };
+  }).sort((a, b) => (b.latest_score || 0) - (a.latest_score || 0));
+
+  // Risk Heatmap: Top recurring non-compliant checklist items across network
+  const failureCounter = {};
+  audits.forEach(a => {
+    (a.categories || []).forEach(cat => {
+      (cat.items || []).forEach(it => {
+        if (it.result === 'fail') {
+          const key = (cat.name || "General") + ":::" + it.text;
+          if (!failureCounter[key]) {
+            const sev = determineSeverity(cat.name, it.text);
+            failureCounter[key] = {
+              category_name: cat.name,
+              item_text: it.text,
+              item_id: it.item_id || "",
+              severity: sev.code,
+              severity_label: sev.label,
+              fail_count: 0
+            };
+          }
+          failureCounter[key].fail_count++;
+        }
+      });
+    });
+  });
+
+  const riskHeatmap = Object.values(failureCounter)
+    .sort((a, b) => b.fail_count - a.fail_count)
+    .slice(0, 8)
+    .map(rf => ({
+      ...rf,
+      fail_rate_percent: totalAudits > 0 ? Math.round((rf.fail_count / totalAudits) * 100) : 0
+    }));
+
+  // Ageing Breakdown
+  const ageingBreakdown = {
+    on_track: openTasks.filter(t => !t.is_overdue).length,
+    overdue_1_7: openTasks.filter(t => t.days_overdue >= 1 && t.days_overdue <= 7).length,
+    overdue_8_15: openTasks.filter(t => t.days_overdue >= 8 && t.days_overdue <= 15).length,
+    overdue_gt_15: openTasks.filter(t => t.days_overdue > 15).length,
+  };
+
+  // Monthly Compliance Trajectory
+  const monthMap = {};
+  audits.forEach(a => {
+    const m = (a.audit_date || a.created_at || "").slice(0, 7);
+    if (m) {
+      if (!monthMap[m]) monthMap[m] = [];
+      monthMap[m].push(a.overall_score);
+    }
+  });
+  const monthlyTrends = Object.keys(monthMap).sort().map(m => ({
+    month: m,
+    avg_score: Math.round((monthMap[m].reduce((acc, v) => acc + v, 0) / monthMap[m].length) * 10) / 10,
+    count: monthMap[m].length
+  }));
+
+  res.json({
+    network_compliance_index: avgNetworkScore,
+    total_audits: totalAudits,
+    total_open_capa: openTasks.length,
+    total_overdue_capa: overdueTasks.length,
+    total_p0_critical: p0Critical.length,
+    branch_leaderboard: branchLeaderboard,
+    risk_heatmap: riskHeatmap,
+    ageing_breakdown: ageingBreakdown,
+    monthly_trends: monthlyTrends,
+    recent_audits: audits.slice(0, 5).map(a => ({
+      id: a.id,
+      dealership_name: a.dealership_name,
+      location: a.location,
+      auditor_name: a.auditor_name,
+      audit_date: a.audit_date,
+      overall_score: a.overall_score,
+      status: a.status
+    }))
+  });
+});
+
+// --- 2. Branch-Wise Audit Scorecards ---
+app.get('/api/reports/branch-scorecards', authMiddleware, (req, res) => {
+  const audits = db.audits || [];
+  const tasks = (db.tasks || []).map(enrichTask);
+
+  const branchesData = STANDARD_BRANCHES.map(sb => {
+    const branchAudits = audits.filter(a => normalizeBranch(a.dealership_name, a.location) === sb.name)
+      .sort((x, y) => new Date(y.audit_date || y.created_at) - new Date(x.audit_date || x.created_at));
+
+    const total = branchAudits.length;
+    const avgScore = total > 0 ? Math.round((branchAudits.reduce((acc, a) => acc + a.overall_score, 0) / total) * 10) / 10 : 0;
+    const latestAudit = branchAudits[0] || null;
+
+    // 20-pillar performance across all audits of this branch
+    const catMap = {};
+    branchAudits.forEach(a => {
+      (a.category_scores || []).forEach(cs => {
+        if (!catMap[cs.name]) catMap[cs.name] = { totalScores: 0, count: 0, passed: 0, applicable: 0 };
+        catMap[cs.name].totalScores += cs.score;
+        catMap[cs.name].count += 1;
+        catMap[cs.name].passed += (cs.passed || 0);
+        catMap[cs.name].applicable += (cs.applicable || 0);
+      });
+    });
+
+    const categoryBreakdown = Object.keys(catMap).map(name => ({
+      name,
+      score: Math.round((catMap[name].totalScores / catMap[name].count) * 10) / 10,
+      passed: catMap[name].passed,
+      applicable: catMap[name].applicable
+    }));
+
+    // Recurring defects at this branch
+    const defectCounts = {};
+    branchAudits.forEach(a => {
+      (a.categories || []).forEach(c => {
+        (c.items || []).forEach(it => {
+          if (it.result === 'fail') {
+            const key = it.text;
+            if (!defectCounts[key]) {
+              const sev = determineSeverity(c.name, it.text);
+              defectCounts[key] = {
+                text: it.text,
+                category: c.name,
+                severity: sev.code,
+                count: 0
+              };
+            }
+            defectCounts[key].count++;
+          }
+        });
+      });
+    });
+    const topDefects = Object.values(defectCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    // Active CAPA for this branch
+    const branchTasks = tasks.filter(t => normalizeBranch(t.dealership_name) === sb.name);
+    const capaSummary = {
+      total: branchTasks.length,
+      open: branchTasks.filter(t => t.status === 'open').length,
+      rectified: branchTasks.filter(t => t.status === 'rectified').length,
+      closed: branchTasks.filter(t => t.status === 'closed').length,
+      overdue: branchTasks.filter(t => t.is_overdue).length,
+      p0: branchTasks.filter(t => t.severity === 'P0' && t.status !== 'closed').length
+    };
+
+    let tier = "Uninspected";
+    if (latestAudit) {
+      if (latestAudit.overall_score >= 80) tier = "Compliant";
+      else if (latestAudit.overall_score >= 60) tier = "Marginal";
+      else tier = "Critical";
+    }
+
+    return {
+      id: sb.id,
+      name: sb.name,
+      location: sb.location,
+      code: sb.code,
+      total_audits: total,
+      avg_score: avgScore,
+      latest_score: latestAudit ? latestAudit.overall_score : null,
+      status_tier: tier,
+      trajectory: branchAudits.map(a => ({
+        id: a.id,
+        date: a.audit_date,
+        score: a.overall_score,
+        auditor: a.auditor_name,
+        status: a.status
+      })).reverse(),
+      category_breakdown: categoryBreakdown,
+      top_defects: topDefects,
+      capa_summary: capaSummary,
+      active_tasks: branchTasks.filter(t => t.status !== 'closed')
+    };
+  });
+
+  res.json(branchesData);
+});
+
+// --- 3. Auditor Productivity & Surveillance Tracking ---
+app.get('/api/reports/auditor-productivity', authMiddleware, (req, res) => {
+  const audits = db.audits || [];
+  const auditorMap = {};
+
+  audits.forEach(a => {
+    const rawNames = (a.auditor_name || "Inspector").split(/[,/&]+/).map(s => s.trim()).filter(Boolean);
+    const primaryName = rawNames[0] || a.auditor_name || "Inspector";
+
+    let photoCount = 0;
+    let failCount = 0;
+    (a.categories || []).forEach(cat => {
+      (cat.items || []).forEach(it => {
+        if (it.result === 'fail') failCount++;
+        if (Array.isArray(it.evidence) && it.evidence.length > 0) photoCount += it.evidence.length;
+      });
+    });
+
+    if (!auditorMap[primaryName]) {
+      auditorMap[primaryName] = {
+        name: primaryName,
+        audits_count: 0,
+        total_score: 0,
+        total_photos: 0,
+        total_observations: 0,
+        audits: [],
+        latest_date: null,
+        latest_branch: null
+      };
+    }
+
+    const stat = auditorMap[primaryName];
+    stat.audits_count++;
+    stat.total_score += (a.overall_score || 0);
+    stat.total_photos += photoCount;
+    stat.total_observations += failCount;
+    stat.audits.push(a);
+
+    if (!stat.latest_date || new Date(a.audit_date) > new Date(stat.latest_date)) {
+      stat.latest_date = a.audit_date;
+      stat.latest_branch = normalizeBranch(a.dealership_name, a.location);
+    }
+  });
+
+  const auditorStats = Object.values(auditorMap).map(aud => {
+    const avgScore = aud.audits_count > 0 ? Math.round((aud.total_score / aud.audits_count) * 10) / 10 : 0;
+    const photosPerAudit = aud.audits_count > 0 ? Math.round((aud.total_photos / aud.audits_count) * 10) / 10 : 0;
+    const obsPerAudit = aud.audits_count > 0 ? Math.round((aud.total_observations / aud.audits_count) * 10) / 10 : 0;
+
+    let thoroughness = "Standard Surveillance";
+    if (photosPerAudit >= 5) thoroughness = "Deep Photographic Surveillance";
+    else if (photosPerAudit >= 2) thoroughness = "Active Photographic Audit";
+
+    return {
+      name: aud.name,
+      audits_completed: aud.audits_count,
+      avg_score_given: avgScore,
+      total_photos_captured: aud.total_photos,
+      photos_per_audit: photosPerAudit,
+      total_observations_logged: aud.total_observations,
+      observations_per_audit: obsPerAudit,
+      latest_audit_date: aud.latest_date,
+      latest_branch: aud.latest_branch,
+      thoroughness: thoroughness
+    };
+  }).sort((a, b) => b.audits_completed - a.audits_completed);
+
+  const totalPhotosNetwork = auditorStats.reduce((acc, a) => acc + a.total_photos_captured, 0);
+  const totalObsNetwork = auditorStats.reduce((acc, a) => acc + a.total_observations_logged, 0);
+
+  res.json({
+    total_auditors: auditorStats.length,
+    total_audits_logged: audits.length,
+    total_photos_archived: totalPhotosNetwork,
+    avg_photos_per_audit: audits.length > 0 ? Math.round((totalPhotosNetwork / audits.length) * 10) / 10 : 0,
+    total_observations: totalObsNetwork,
+    auditors: auditorStats
+  });
 });
 
 // --- UNIVERSAL EXPORT ENGINES (PDF & EXCEL FOR ALL LOGGED IN EMPLOYEES & DIRECTORS) ---
@@ -944,6 +1496,14 @@ app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
     (cat.items || []).forEach(item => {
       const resText = item.result ? item.result.toUpperCase() : 'N/A';
       let resColor = resText === 'PASS' ? '#059669' : resText === 'FAIL' ? '#DC2626' : '#6B7280';
+      let resBadge = `[${resText}]`;
+      if (resText === 'FAIL') {
+        const sev = determineSeverity(cat.name, item.text);
+        resBadge = `[FAIL - ${sev.code}]`;
+        if (sev.code === 'P0') resColor = '#B91C1C';
+        else if (sev.code === 'P1') resColor = '#C2410C';
+        else resColor = '#B45309';
+      }
       
       const textWidth = 430;
       const textHeight = doc.font('Helvetica').fontSize(9).heightOfString(item.text, { width: textWidth });
@@ -986,8 +1546,8 @@ app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
       }
 
       // Print status badge and checklist instruction
-      doc.font('Helvetica-Bold').fontSize(9).fillColor(resColor).text(`[${resText}]`, 45, y);
-      doc.font('Helvetica').fontSize(9).fillColor('#0A0A0A').text(item.text, 88, y, { width: textWidth });
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(resColor).text(resBadge, 35, y);
+      doc.font('Helvetica').fontSize(9).fillColor('#0A0A0A').text(item.text, 92, y, { width: 425 });
       y += textHeight + 4;
 
       // Print auditor notes without overlapping

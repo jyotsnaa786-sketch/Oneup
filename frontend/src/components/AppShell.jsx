@@ -2,7 +2,7 @@ import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import InstallPrompt from "@/components/InstallPrompt";
-import { Gauge, ClipboardText, PlusCircle, SignOut, Wrench, WarningCircle, Sliders, Shield, FileDashed } from "@phosphor-icons/react";
+import { Gauge, ClipboardText, PlusCircle, SignOut, Wrench, WarningCircle, Sliders, Shield, FileDashed, Buildings, ChartPieSlice, Users } from "@phosphor-icons/react";
 
 export default function AppShell({ children }) {
   const { user, logout } = useAuth();
@@ -19,23 +19,26 @@ export default function AppShell({ children }) {
   const canViewAdminPortal = isAdmin || isDirector;
 
   const navItems = [
-    { to: "/", label: "Dashboard", short: "Home", icon: Gauge, testid: "nav-dashboard", allow: true },
-    { to: "/audits", label: "Audits Archive", short: "Archive", icon: ClipboardText, testid: "nav-audits", allow: true },
-    { to: "/tasks", label: "Action Tracker", short: "Tasks", icon: WarningCircle, testid: "nav-tasks", allow: true },
-    { to: "/drafts", label: "Saved Drafts", short: "Drafts", icon: FileDashed, testid: "nav-drafts", allow: !isDirector },
-    { to: "/admin", label: "Admin Portal", short: "Admin", icon: Shield, testid: "nav-admin", allow: canViewAdminPortal },
-    { to: "/template", label: "Template Editor", short: "Template", icon: Sliders, testid: "nav-template", allow: isAdmin },
-    { to: "/audits/new", label: "Run New Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: !isDirector, isAction: true },
+    { to: "/", label: "Hub", short: "Hub", icon: Gauge, testid: "nav-dashboard", allow: true },
+    { to: "/mis", label: "Director MIS", short: "MIS", icon: ChartPieSlice, testid: "nav-mis", allow: true },
+    { to: "/scorecards", label: "Scorecards", short: "Scorecards", icon: Buildings, testid: "nav-scorecards", allow: true },
+    { to: "/audits", label: "Central Vault", short: "Vault", icon: ClipboardText, testid: "nav-audits", allow: true },
+    { to: "/tasks", label: "CAPA Tracker", short: "CAPA", icon: WarningCircle, testid: "nav-tasks", allow: true },
+    { to: "/productivity", label: "Productivity", short: "Auditors", icon: Users, testid: "nav-productivity", allow: true },
+    { to: "/drafts", label: "Drafts", short: "Drafts", icon: FileDashed, testid: "nav-drafts", allow: !isDirector },
+    { to: "/admin", label: "Admin", short: "Admin", icon: Shield, testid: "nav-admin", allow: canViewAdminPortal },
+    { to: "/template", label: "Template", short: "Template", icon: Sliders, testid: "nav-template", allow: isAdmin },
+    { to: "/audits/new", label: "Run OneUP Audit", short: "Run Audit", icon: PlusCircle, testid: "nav-new-audit", allow: !isDirector, isAction: true },
   ].filter(item => item.allow);
 
-  // Clean 5-tab mobile navigation without overlapping protrusions
+  // Clean 6-tab mobile navigation
   const mobileItems = [
-    { to: "/", label: "Home", icon: Gauge },
-    { to: "/audits", label: "Archive", icon: ClipboardText },
-    { to: "/drafts", label: "Drafts", icon: FileDashed },
+    { to: "/", label: "Hub", icon: Gauge },
+    { to: "/mis", label: "MIS", icon: ChartPieSlice },
+    { to: "/scorecards", label: "Branches", icon: Buildings },
     { to: "/audits/new", label: "Run Audit", icon: PlusCircle, highlight: true },
-    { to: "/tasks", label: "Tasks", icon: WarningCircle },
-    { to: canViewAdminPortal ? "/admin" : "/login", label: canViewAdminPortal ? "Admin" : "Profile", icon: canViewAdminPortal ? Shield : SignOut, isLogout: !canViewAdminPortal },
+    { to: "/audits", label: "Vault", icon: ClipboardText },
+    { to: "/tasks", label: "CAPA", icon: WarningCircle },
   ];
 
   return (
@@ -120,7 +123,7 @@ export default function AppShell({ children }) {
       <main className="max-w-[1400px] w-full max-w-full mx-auto px-3 sm:px-6 py-5 sm:py-8 flex-1 pb-28 xl:pb-10 overflow-x-hidden">{children}</main>
 
       {/* ZERO-OVERLAP UNIFORM MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="xl:hidden fixed bottom-0 left-0 right-0 w-full z-50 h-16 bg-white border-t-2 border-primary grid grid-cols-5 shadow-2xl overflow-hidden">
+      <nav className="xl:hidden fixed bottom-0 left-0 right-0 w-full z-50 h-16 bg-white border-t-2 border-primary grid grid-cols-6 shadow-2xl overflow-hidden">
         {mobileItems.map((m) => {
           const active = m.to === "/" ? location.pathname === "/" : location.pathname.startsWith(m.to) && m.to !== "/login";
           const Icon = m.icon;
