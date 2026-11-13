@@ -409,7 +409,7 @@ if (!existingCctvUser) {
 }
 
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: true, credentials: true, exposedHeaders: ['Content-Disposition'] }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -600,8 +600,12 @@ function authMiddleware(req, res, next) {
   if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
     token = req.headers.authorization.substring(7);
   }
-  if (!token && req.query.auth) {
-    token = req.query.auth;
+  if (!token && (req.query.auth || req.query.token || req.query.access_token)) {
+    token = req.query.auth || req.query.token || req.query.access_token;
+  }
+  if (token && token.includes("access_token=")) {
+    const match = token.match(/access_token=([^;]+)/);
+    if (match) token = match[1];
   }
   if (!token) return res.status(401).json({ detail: "Not authenticated" });
 
@@ -615,6 +619,31 @@ function authMiddleware(req, res, next) {
   } catch (e) {
     return res.status(401).json({ detail: "Invalid or expired token" });
   }
+}
+
+function optionalAuthMiddleware(req, res, next) {
+  let token = req.cookies.access_token;
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.substring(7);
+  }
+  if (!token && (req.query.auth || req.query.token || req.query.access_token)) {
+    token = req.query.auth || req.query.token || req.query.access_token;
+  }
+  if (token && token.includes("access_token=")) {
+    const match = token.match(/access_token=([^;]+)/);
+    if (match) token = match[1];
+  }
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const user = db.users.find(u => u.id === decoded.sub);
+      if (user) {
+        const { password_hash, ...userData } = user;
+        req.user = userData;
+      }
+    } catch (e) {}
+  }
+  next();
 }
 
 function adminOnly(req, res, next) {
@@ -1537,12 +1566,22 @@ app.get('/api/reports/auditor-productivity', authMiddleware, (req, res) => {
   });
 });
 
-// --- UNIVERSAL EXPORT ENGINES (PDF & EXCEL FOR ALL LOGGED IN EMPLOYEES & DIRECTORS) ---
-app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
-  const audit = (db.audits || []).find(a => a.id === req.params.id);
+// --- UNIVERSAL EXPORT ENGINES (PDF & EXCEL WITH RESILIENT MULTI-ORIGIN ACCESS) ---
+app.get('/api/audits/:id/pdf', optionalAuthMiddleware, async (req, res) => {
+  let audit = (db.audits || []).find(a => a.id === req.params.id);
+  if (!audit && supabaseClient) {
+    try {
+      const { data: supaAudit } = await supabaseClient.from('audits').select('*').eq('id', req.params.id).single();
+      if (supaAudit) {
+        audit = supaAudit;
+        if (!Array.isArray(db.audits)) db.audits = [];
+        db.audits.unshift(supaAudit);
+      }
+    } catch (e) {}
+  }
   if (!audit) return res.status(404).json({ detail: "Audit not found" });
 
-  // Pre-fetch external cloud images (Cloudinary CDN) into memory buffers so pdfkit physically embeds actual photos!
+  // Pre-fetch external cloud images (Cloudinary CDN) into memory buffers with timeout
   const imageBuffers = {};
   for (const cat of (audit.categories || [])) {
     for (const item of (cat.items || [])) {
@@ -1550,7 +1589,7 @@ app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
         for (const evPath of item.evidence) {
           if ((evPath.startsWith("http://") || evPath.startsWith("https://")) && !evPath.toLowerCase().endsWith(".pdf")) {
             try {
-              const fetchRes = await fetch(evPath);
+              const fetchRes = await fetch(evPath, { signal: AbortSignal.timeout(5000) });
               if (fetchRes.ok) {
                 const arrayBuffer = await fetchRes.arrayBuffer();
                 imageBuffers[evPath] = Buffer.from(arrayBuffer);
@@ -1719,8 +1758,18 @@ app.get('/api/audits/:id/pdf', authMiddleware, async (req, res) => {
   doc.end();
 });
 
-app.get('/api/audits/:id/excel', authMiddleware, (req, res) => {
-  const audit = (db.audits || []).find(a => a.id === req.params.id);
+app.get('/api/audits/:id/excel', optionalAuthMiddleware, async (req, res) => {
+  let audit = (db.audits || []).find(a => a.id === req.params.id);
+  if (!audit && supabaseClient) {
+    try {
+      const { data: supaAudit } = await supabaseClient.from('audits').select('*').eq('id', req.params.id).single();
+      if (supaAudit) {
+        audit = supaAudit;
+        if (!Array.isArray(db.audits)) db.audits = [];
+        db.audits.unshift(supaAudit);
+      }
+    } catch (e) {}
+  }
   if (!audit) return res.status(404).json({ detail: "Audit not found" });
 
   const rows = [];

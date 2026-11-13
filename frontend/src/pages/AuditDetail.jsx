@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api, getHostBase } from "@/lib/apiClient";
+import { downloadAuditPdf, downloadAuditExcel } from "@/lib/exportUtils";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/context/AuthContext";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -307,13 +308,11 @@ export default function AuditDetail() {
   };
 
   const downloadPdf = () => {
-    window.open(`${getHostBase()}/api/audits/${id}/pdf?auth=${encodeURIComponent(document.cookie)}`, "_blank");
-    toast.success("Downloading OneUP Motors PDF report...");
+    downloadAuditPdf(id, audit?.dealership_name, audit?.audit_date);
   };
 
   const downloadExcel = () => {
-    window.open(`${getHostBase()}/api/audits/${id}/excel?auth=${encodeURIComponent(document.cookie)}`, "_blank");
-    toast.success("Downloading Microsoft Excel spreadsheet (.xlsx)...");
+    downloadAuditExcel(id, audit?.dealership_name, audit?.audit_date);
   };
 
   return (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api, getHostBase } from "@/lib/apiClient";
+import { downloadAuditPdf, downloadAuditExcel } from "@/lib/exportUtils";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/context/AuthContext";
 import { ScoreBadge, scoreColor } from "@/components/StatusBits";
@@ -77,14 +78,12 @@ export default function AdminPortal() {
     );
   }
 
-  const exportPdf = (id, name) => {
-    window.open(`${getHostBase()}/api/audits/${id}/pdf?auth=${encodeURIComponent(document.cookie)}`, "_blank");
-    toast.success(`Generating branded PDF report for ${name}...`);
+  const exportPdf = (id, name, date) => {
+    downloadAuditPdf(id, name, date);
   };
 
-  const exportExcel = (id, name) => {
-    window.open(`${getHostBase()}/api/audits/${id}/excel?auth=${encodeURIComponent(document.cookie)}`, "_blank");
-    toast.success(`Generating Excel spreadsheet (.xlsx) for ${name}...`);
+  const exportExcel = (id, name, date) => {
+    downloadAuditExcel(id, name, date);
   };
 
   if (!audits) return <AppShell><div className="h-64 border border-border bg-muted/40 animate-pulse" /></AppShell>;
@@ -273,13 +272,13 @@ export default function AdminPortal() {
                   <td className="px-4 sm:px-6 py-3.5 text-right">
                     <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                       <button
-                        onClick={() => exportPdf(a.id, a.dealership_name)}
+                        onClick={() => exportPdf(a.id, a.dealership_name, a.audit_date)}
                         className="h-8.5 px-3 bg-primary text-white font-bold text-[10px] sm:text-[11px] tracking-wider uppercase inline-flex items-center gap-1 hover:bg-blue-800 transition-colors shadow-xs"
                       >
                         <Printer weight="bold" size={14} /> PDF
                       </button>
                       <button
-                        onClick={() => exportExcel(a.id, a.dealership_name)}
+                        onClick={() => exportExcel(a.id, a.dealership_name, a.audit_date)}
                         className="h-8.5 px-3 bg-emerald-700 text-white font-bold text-[10px] sm:text-[11px] tracking-wider uppercase inline-flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-xs"
                       >
                         <FileXls weight="bold" size={14} /> Excel

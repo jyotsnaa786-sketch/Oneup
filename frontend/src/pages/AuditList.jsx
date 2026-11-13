@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api, API } from "@/lib/apiClient";
+import { downloadAuditPdf, downloadAuditExcel } from "@/lib/exportUtils";
 import { useAuth } from "@/context/AuthContext";
 import AppShell from "@/components/AppShell";
 import { ScoreBadge, scoreColor } from "@/components/StatusBits";
@@ -356,21 +357,23 @@ export default function AuditList() {
                           View
                         </Link>
 
-                        <a
-                          href={`${API}/audits/${a.id}/pdf`}
+                        <button
+                          onClick={() => downloadAuditPdf(a.id, canonicalName || a.dealership_name, a.audit_date)}
                           className="w-8 h-8 border border-border inline-flex items-center justify-center hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
                           title="Download Evidence-Embedded PDF"
+                          type="button"
                         >
                           <FilePdf size={16} />
-                        </a>
+                        </button>
 
-                        <a
-                          href={`${API}/audits/${a.id}/excel`}
+                        <button
+                          onClick={() => downloadAuditExcel(a.id, canonicalName || a.dealership_name, a.audit_date)}
                           className="w-8 h-8 border border-border inline-flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors"
                           title="Download Inspection Excel Matrix"
+                          type="button"
                         >
                           <FileXls size={16} />
-                        </a>
+                        </button>
 
                         {isAdmin && (
                           <button
