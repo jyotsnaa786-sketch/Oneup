@@ -10,7 +10,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     api
       .get("/auth/me")
-      .then((res) => setUser(res.data))
+      .then((res) => {
+        if (res.data && typeof res.data === "object" && res.data.email) {
+          setUser(res.data);
+        } else {
+          setUser(false);
+        }
+      })
       .catch((err) => {
         // ONLY invalidate token on 401 Unauthorized or 403 Forbidden.
         // On network drops or cold-start backend delays, do NOT purge saved credentials!

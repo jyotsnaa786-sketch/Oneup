@@ -27,7 +27,13 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    api.get("/dashboard/stats").then((r) => setStats(r.data)).catch(() => toast.error("Failed to load dashboard"));
+    api.get("/dashboard/stats")
+      .then((r) => {
+        if (r.data && typeof r.data === "object" && typeof r.data.total_audits === "number") {
+          setStats(r.data);
+        }
+      })
+      .catch(() => toast.error("Failed to load dashboard"));
   }, []);
 
   if (!stats) {
@@ -164,7 +170,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {stats.recent.map((a, i) => (
+                {(Array.isArray(stats?.recent) ? stats.recent : []).map((a, i) => (
                   <tr key={a.id} className={`border-b border-border/60 hover:bg-muted/40 transition-colors ${i % 2 ? "bg-muted/20" : ""}`}>
                     <td className="px-6 py-3">
                       <Link to={`/audits/${a.id}`} className="font-semibold text-foreground hover:text-primary transition-colors" data-testid={`recent-audit-${a.id}`}>

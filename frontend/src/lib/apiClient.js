@@ -22,9 +22,14 @@ export const getHostBase = () => {
     return `http://${hostname}:8001`;
   }
 
-  // 3. Unified Hosting on Vercel, Render, or Custom Domain
-  // Calls its own origin directly (same-domain API routing, zero CORS issues)
-  return `${window.location.protocol}//${window.location.host}`;
+  // 3. Cloud / Production Hosting:
+  // If hosted on Render alongside backend on the same domain:
+  if (hostname.includes("onrender.com")) {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+
+  // Default to live Render Backend for Vercel / External Frontend hosting
+  return "https://oneup-motors-audit.onrender.com";
 };
 
 export const API = `${getHostBase()}/api`;
