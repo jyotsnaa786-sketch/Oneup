@@ -29,7 +29,7 @@ export const getHostBase = () => {
   }
 
   // Default to live Render Backend for Vercel / External Frontend hosting
-  return "https://oneup-motors-audit.onrender.com";
+  return "https://oneup-dk35.onrender.com";
 };
 
 export const API = `${getHostBase()}/api`;
