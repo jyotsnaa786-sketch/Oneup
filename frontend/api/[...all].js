@@ -1,7 +1,0 @@
-export default function handler(req, res) {
-  res.status(200).json({
-    status: "ok",
-    caughtUrl: req.url,
-    query: req.query
-  });
-}
