@@ -32,17 +32,32 @@ if (DEFAULT_CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
   }
 }
 
+const os = require('os');
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const PORT = process.env.PORT || 8001;
 const JWT_SECRET = process.env.JWT_SECRET || 'oneup_motors_secret_key_2026';
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || (isServerless ? path.join(os.tmpdir(), 'oneup_data') : path.join(__dirname, 'data'));
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
-const INTERNAL_EXCEL = path.join(DATA_DIR, 'template_source.xlsx');
+const INTERNAL_EXCEL = path.join(__dirname, 'data', 'template_source.xlsx');
 const LOCAL_EXCEL = "C:\\Users\\jyots_iz\\OneDrive\\Documents\\Physical Audit Chk Sheet.xlsx";
 const EXCEL_PATH = fs.existsSync(LOCAL_EXCEL) ? LOCAL_EXCEL : INTERNAL_EXCEL;
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Copy initial seed data to /tmp in serverless environments if not already present
+if (isServerless) {
+  const bundledTemplate = path.join(__dirname, 'data', 'template_source.json');
+  const targetTemplate = path.join(DATA_DIR, 'template_source.json');
+  if (fs.existsSync(bundledTemplate) && !fs.existsSync(targetTemplate)) {
+    try { fs.copyFileSync(bundledTemplate, targetTemplate); } catch (e) {}
+  }
+  const bundledDB = path.join(__dirname, 'data', 'db.json');
+  if (fs.existsSync(bundledDB) && !fs.existsSync(DB_FILE)) {
+    try { fs.copyFileSync(bundledDB, DB_FILE); } catch (e) {}
+  }
+}
 
 let db = { users: [], audits: [], files: [], tasks: [], template: [], login_attempts: {} };
 if (fs.existsSync(DB_FILE)) {
@@ -82,6 +97,73 @@ let cloudMediaCollection = null;
 let lastCloudError = null;
 const MONGODB_URI = 'mongodb+srv://oneup_admin:Oneup12345@cluster0.mmwbfr7.mongodb.net/oneup_motors_portal?retryWrites=true&w=majority&appName=Cluster0';
 
+// Seeded Default System Credentials
+const ADMIN_EMAIL = 'jyotsnaa786@gmail.com';
+const ADMIN_PASS = 'girdhar123';
+const DIRECTOR_EMAIL = 'directors@oneupmaruti.com';
+const DIRECTOR_PASS = 'director123';
+const CCTV_AUDITOR_EMAIL = 'cctv.audit@oneupmaruti.com';
+const CCTV_AUDITOR_PASS = 'audit123';
+
+function ensureDefaultUsers() {
+  if (!Array.isArray(db.users)) db.users = [];
+  db.login_attempts = {};
+
+  // Admin Account
+  const cleanAdmin = ADMIN_EMAIL.toLowerCase().trim();
+  let admin = db.users.find(u => u.email && u.email.toLowerCase().trim() === cleanAdmin);
+  if (admin) {
+    admin.email = cleanAdmin;
+    admin.role = 'admin';
+    admin.password_hash = bcrypt.hashSync(ADMIN_PASS, 10);
+  } else {
+    db.users.push({
+      id: '6a6c8ca3c8557f58c23d3a27',
+      email: cleanAdmin,
+      name: 'OneUP Admin Manager',
+      role: 'admin',
+      password_hash: bcrypt.hashSync(ADMIN_PASS, 10),
+      created_at: new Date().toISOString()
+    });
+  }
+
+  // Director Account
+  const cleanDirector = DIRECTOR_EMAIL.toLowerCase().trim();
+  let director = db.users.find(u => u.email && u.email.toLowerCase().trim() === cleanDirector);
+  if (director) {
+    director.email = cleanDirector;
+    director.role = 'director';
+    director.password_hash = bcrypt.hashSync(DIRECTOR_PASS, 10);
+  } else {
+    db.users.push({
+      id: '7b7d9db4d9668f69d34e4b38',
+      email: cleanDirector,
+      name: 'OneUP Board of Directors',
+      role: 'director',
+      password_hash: bcrypt.hashSync(DIRECTOR_PASS, 10),
+      created_at: new Date().toISOString()
+    });
+  }
+
+  // CCTV Auditor Account
+  const cleanCctv = CCTV_AUDITOR_EMAIL.toLowerCase().trim();
+  let cctv = db.users.find(u => u.email && u.email.toLowerCase().trim() === cleanCctv);
+  if (cctv) {
+    cctv.email = cleanCctv;
+    cctv.role = 'auditor';
+    cctv.password_hash = bcrypt.hashSync(CCTV_AUDITOR_PASS, 10);
+  } else {
+    db.users.push({
+      id: 'cctv_auditor_user_id',
+      email: cleanCctv,
+      name: 'Jitendra & Manik (CCTV Auditor)',
+      role: 'auditor',
+      password_hash: bcrypt.hashSync(CCTV_AUDITOR_PASS, 10),
+      created_at: new Date().toISOString()
+    });
+  }
+}
+
 async function initCloudDatabase() {
   // 1. First priority: Restore latest state from Supabase Cloud
   if (supabaseClient) {
@@ -98,6 +180,7 @@ async function initCloudDatabase() {
         if (!db.template) db.template = [];
         if (!db.audits) db.audits = [];
         if (!db.users) db.users = [];
+        ensureDefaultUsers();
       } else if (supaErr) {
         console.warn("Supabase initial state fetch notice:", supaErr.message);
       }
@@ -136,26 +219,12 @@ async function initCloudDatabase() {
         ensureTemplateLoaded();
       }
       
-      // Always reset login lockouts and ensure admin user has correct password
-      db.login_attempts = {};
-      let admin = db.users.find(u => u.email === ADMIN_EMAIL);
-      if (admin) {
-        admin.password_hash = bcrypt.hashSync(ADMIN_PASS, 10);
-      } else {
-        db.users.push({
-          id: '6a6c8ca3c8557f58c23d3a27',
-          email: ADMIN_EMAIL,
-          name: 'OneUP Admin Manager',
-          role: 'admin',
-          password_hash: bcrypt.hashSync(ADMIN_PASS, 10),
-          created_at: new Date().toISOString()
-        });
-      }
+      ensureDefaultUsers();
       try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); } catch(e){}
       await syncToCloudDatabase();
     } else {
       console.log("☁️ Cloud database archive empty. Initializing cloud record from current DB state...");
-      db.login_attempts = {};
+      ensureDefaultUsers();
       await syncToCloudDatabase();
     }
   } catch (err) {
@@ -262,17 +331,27 @@ async function restoreAllCloudMediaToDisk() {
   }
 }
 
+let cloudSyncTimer = null;
+function triggerCloudSync() {
+  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => {
+    syncToCloudDatabase().catch(() => {});
+  }, 1000);
+}
+
 function saveDB() {
   try {
-    const tmpFile = `${DB_FILE}.${Date.now()}.tmp`;
-    fs.writeFileSync(tmpFile, JSON.stringify(db, null, 2), 'utf8');
-    if (fs.existsSync(DB_FILE)) fs.unlinkSync(DB_FILE);
-    fs.renameSync(tmpFile, DB_FILE);
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
   } catch (e) {
-    try { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); } catch (err) {}
+    try {
+      const tmpFile = `${DB_FILE}.${Date.now()}.tmp`;
+      fs.writeFileSync(tmpFile, JSON.stringify(db, null, 2), 'utf8');
+      if (fs.existsSync(DB_FILE)) fs.unlinkSync(DB_FILE);
+      fs.renameSync(tmpFile, DB_FILE);
+    } catch (err) {}
   }
-  // Seamless asynchronous background cloud syncing (Prevents ephemeral data loss across reboots)
-  syncToCloudDatabase().catch(() => {});
+  // Debounced asynchronous background cloud syncing (Prevents event-loop starvation under burst writes)
+  triggerCloudSync();
 }
 
 const TEMPLATE_JSON_PATH = path.join(DATA_DIR, 'template_source.json');
@@ -348,70 +427,41 @@ function ensureTemplateLoaded() {
 }
 ensureTemplateLoaded();
 
-// Seed & Synchronize Admin Account
-const ADMIN_EMAIL = 'jyotsnaa786@gmail.com';
-const ADMIN_PASS = 'girdhar123';
-let existingAdmin = db.users.find(u => u.email === ADMIN_EMAIL);
-if (!existingAdmin) {
-  const hash = bcrypt.hashSync(ADMIN_PASS, 10);
-  db.users.push({
-    id: '6a6c8ca3c8557f58c23d3a27',
-    email: ADMIN_EMAIL,
-    name: 'OneUP Admin Manager',
-    role: 'admin',
-    password_hash: hash,
-    created_at: new Date().toISOString()
-  });
-  saveDB();
-} else {
-  existingAdmin.password_hash = bcrypt.hashSync(ADMIN_PASS, 10);
-  saveDB();
-}
-
-// Reset login attempts & lockouts on server startup
-db.login_attempts = {};
+// Ensure and synchronize all standard seeded accounts and reset lockouts
+ensureDefaultUsers();
 saveDB();
 
-// Seed Director View-Only Account
-const DIRECTOR_EMAIL = 'directors@oneupmaruti.com';
-const DIRECTOR_PASS = 'director123';
-if (!db.users.find(u => u.email === DIRECTOR_EMAIL)) {
-  const hash = bcrypt.hashSync(DIRECTOR_PASS, 10);
-  db.users.push({
-    id: '7b7d9db4d9668f69d34e4b38',
-    email: DIRECTOR_EMAIL,
-    name: 'OneUP Board of Directors',
-    role: 'director',
-    password_hash: hash,
-    created_at: new Date().toISOString()
-  });
-  saveDB();
-}
-
-// Seed CCTV Auditor Account
-const CCTV_AUDITOR_EMAIL = 'cctv.audit@oneupmaruti.com';
-const CCTV_AUDITOR_PASS = 'audit123';
-let existingCctvUser = db.users.find(u => u.email.toLowerCase() === CCTV_AUDITOR_EMAIL.toLowerCase());
-if (!existingCctvUser) {
-  const hash = bcrypt.hashSync(CCTV_AUDITOR_PASS, 10);
-  db.users.push({
-    id: 'cctv_auditor_user_id',
-    email: CCTV_AUDITOR_EMAIL,
-    name: 'Jitendra & Manik (CCTV Auditor)',
-    role: 'auditor',
-    password_hash: hash,
-    created_at: new Date().toISOString()
-  });
-  saveDB();
-} else {
-  existingCctvUser.password_hash = bcrypt.hashSync(CCTV_AUDITOR_PASS, 10);
-  saveDB();
-}
-
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors({ origin: true, credentials: true, exposedHeaders: ['Content-Disposition'] }));
 app.use(express.json());
 app.use(cookieParser());
+
+let cloudInitPromise = null;
+function getCloudInitPromise() {
+  if (!cloudInitPromise) {
+    cloudInitPromise = initCloudDatabase()
+      .then(() => restoreAllCloudMediaToDisk())
+      .catch(e => console.error("Cloud boot notice:", e.message));
+  }
+  return cloudInitPromise;
+}
+
+app.use(async (req, res, next) => {
+  if (isServerless) {
+    try { await getCloudInitPromise(); } catch (e) {}
+  }
+  next();
+});
+
+const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
+const cookieOptions = {
+  httpOnly: true,
+  path: '/',
+  maxAge: 7 * 24 * 3600 * 1000,
+  sameSite: isProduction ? 'none' : 'lax',
+  secure: isProduction
+};
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
@@ -596,10 +646,16 @@ function enrichTask(task) {
 }
 
 function authMiddleware(req, res, next) {
-  let token = req.cookies.access_token;
-  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
-    token = req.headers.authorization.substring(7);
+  let token = null;
+  // 1. Authorization header Bearer token (preferred for client-side API calls)
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.substring(7).trim();
   }
+  // 2. Cookie access_token fallback
+  if (!token && req.cookies && req.cookies.access_token) {
+    token = req.cookies.access_token;
+  }
+  // 3. Query parameter fallback (for direct PDF / file downloads)
   if (!token && (req.query.auth || req.query.token || req.query.access_token)) {
     token = req.query.auth || req.query.token || req.query.access_token;
   }
@@ -615,16 +671,34 @@ function authMiddleware(req, res, next) {
     if (!user) return res.status(401).json({ detail: "User not found" });
     const { password_hash, ...userData } = user;
     req.user = userData;
-    next();
+    return next();
   } catch (e) {
+    // If the primary token failed, try fallback (e.g. if cookie was expired but header has bearer or vice versa)
+    const fallbackToken = (token === req.cookies?.access_token)
+      ? (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7).trim() : null)
+      : req.cookies?.access_token;
+    if (fallbackToken && fallbackToken !== token) {
+      try {
+        const decoded = jwt.verify(fallbackToken, JWT_SECRET);
+        const user = db.users.find(u => u.id === decoded.sub);
+        if (user) {
+          const { password_hash, ...userData } = user;
+          req.user = userData;
+          return next();
+        }
+      } catch (err2) {}
+    }
     return res.status(401).json({ detail: "Invalid or expired token" });
   }
 }
 
 function optionalAuthMiddleware(req, res, next) {
-  let token = req.cookies.access_token;
-  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
-    token = req.headers.authorization.substring(7);
+  let token = null;
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.substring(7).trim();
+  }
+  if (!token && req.cookies && req.cookies.access_token) {
+    token = req.cookies.access_token;
   }
   if (!token && (req.query.auth || req.query.token || req.query.access_token)) {
     token = req.query.auth || req.query.token || req.query.access_token;
@@ -641,7 +715,18 @@ function optionalAuthMiddleware(req, res, next) {
         const { password_hash, ...userData } = user;
         req.user = userData;
       }
-    } catch (e) {}
+    } catch (e) {
+      if (req.cookies?.access_token && token !== req.cookies.access_token) {
+        try {
+          const decoded = jwt.verify(req.cookies.access_token, JWT_SECRET);
+          const user = db.users.find(u => u.id === decoded.sub);
+          if (user) {
+            const { password_hash, ...userData } = user;
+            req.user = userData;
+          }
+        } catch (err2) {}
+      }
+    }
   }
   next();
 }
@@ -694,14 +779,15 @@ pause
 app.post('/api/auth/register', (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password || !name) return res.status(400).json({ detail: "All fields are required" });
-  const cleanEmail = email.toLowerCase();
-  if (db.users.find(u => u.email === cleanEmail)) {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name.trim();
+  if (db.users.find(u => u.email && u.email.trim().toLowerCase() === cleanEmail)) {
     return res.status(400).json({ detail: "Email already registered" });
   }
   const newUser = {
     id: crypto.randomUUID(),
     email: cleanEmail,
-    name: name,
+    name: cleanName,
     role: "auditor",
     password_hash: bcrypt.hashSync(password, 10),
     created_at: new Date().toISOString()
@@ -709,16 +795,15 @@ app.post('/api/auth/register', (req, res) => {
   db.users.push(newUser);
   saveDB();
   const token = jwt.sign({ sub: newUser.id, email: newUser.email, type: "access" }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('access_token', token, { httpOnly: true, path: '/', maxAge: 7 * 24 * 3600 * 1000 });
+  res.cookie('access_token', token, cookieOptions);
   res.json({ id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role, access_token: token });
 });
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ detail: "Email and password required" });
-  const cleanEmail = email.toLowerCase();
-  const ip = req.ip || 'unknown';
-  const identifier = `${ip}:${cleanEmail}`;
+  const cleanEmail = email.trim().toLowerCase();
+  const identifier = cleanEmail;
 
   let attempt = db.login_attempts[identifier] || { count: 0 };
   
@@ -728,7 +813,7 @@ app.post('/api/auth/login', (req, res) => {
     attempt = { count: 0 };
   }
 
-  const user = db.users.find(u => u.email === cleanEmail);
+  const user = db.users.find(u => u.email && u.email.trim().toLowerCase() === cleanEmail);
   const isValidPassword = user && bcrypt.compareSync(password, user.password_hash);
 
   // If valid credentials are provided, unlock account immediately and proceed with login
@@ -736,13 +821,13 @@ app.post('/api/auth/login', (req, res) => {
     delete db.login_attempts[identifier];
     saveDB();
     const token = jwt.sign({ sub: user.id, email: user.email, type: "access" }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('access_token', token, { httpOnly: true, path: '/', maxAge: 7 * 24 * 3600 * 1000 });
+    res.cookie('access_token', token, cookieOptions);
     return res.json({ id: user.id, email: user.email, name: user.name, role: user.role, access_token: token });
   }
 
   // If password is wrong and lock threshold is reached
   if (attempt.count >= 5 && attempt.locked_until && new Date(attempt.locked_until) > new Date()) {
-    return res.status(429).json({ detail: "Too many attempts. Try again in 15 minutes." });
+    return res.status(429).json({ detail: "Too many attempts. Try again in 15 minutes or reset your password." });
   }
 
   // Record failed login attempt
@@ -761,8 +846,8 @@ app.all('/api/auth/clear-rate-limit', (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('access_token', { path: '/' });
-  res.clearCookie('refresh_token', { path: '/' });
+  res.clearCookie('access_token', { path: '/', sameSite: cookieOptions.sameSite, secure: cookieOptions.secure });
+  res.clearCookie('refresh_token', { path: '/', sameSite: cookieOptions.sameSite, secure: cookieOptions.secure });
   res.json({ message: "Logged out" });
 });
 
@@ -770,7 +855,7 @@ app.post('/api/auth/forgot-password', (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ detail: "Email is required" });
   const cleanEmail = email.toLowerCase().trim();
-  const user = db.users.find(u => u.email === cleanEmail);
+  const user = db.users.find(u => u.email && u.email.trim().toLowerCase() === cleanEmail);
   if (!user) return res.status(404).json({ detail: "No account found registered under this email address." });
 
   // Generate 6-digit verification code valid for 15 minutes
@@ -796,7 +881,7 @@ app.post('/api/auth/reset-password', (req, res) => {
     return res.status(400).json({ detail: "New password must be at least 4 characters long" });
   }
   const cleanEmail = email.toLowerCase().trim();
-  const user = db.users.find(u => u.email === cleanEmail);
+  const user = db.users.find(u => u.email && u.email.trim().toLowerCase() === cleanEmail);
   if (!user) return res.status(404).json({ detail: "No account found under this email." });
 
   if (!user.reset_code || String(user.reset_code).trim() !== String(code).trim()) {
@@ -813,7 +898,7 @@ app.post('/api/auth/reset-password', (req, res) => {
   saveDB();
 
   const token = jwt.sign({ sub: user.id, email: user.email, type: "access" }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('access_token', token, { httpOnly: true, path: '/', maxAge: 7 * 24 * 3600 * 1000 });
+  res.cookie('access_token', token, cookieOptions);
   res.json({
     message: "Password updated successfully!",
     id: user.id,
@@ -1566,8 +1651,8 @@ app.get('/api/reports/auditor-productivity', authMiddleware, (req, res) => {
   });
 });
 
-// --- UNIVERSAL EXPORT ENGINES (PDF & EXCEL WITH RESILIENT MULTI-ORIGIN ACCESS) ---
-app.get('/api/audits/:id/pdf', optionalAuthMiddleware, async (req, res) => {
+// --- UNIVERSAL EXPORT ENGINES (RESTRICTED TO ADMIN & DIRECTOR ROLES) ---
+app.get('/api/audits/:id/pdf', authMiddleware, adminOrDirector, async (req, res) => {
   let audit = (db.audits || []).find(a => a.id === req.params.id);
   if (!audit && supabaseClient) {
     try {
@@ -1758,7 +1843,7 @@ app.get('/api/audits/:id/pdf', optionalAuthMiddleware, async (req, res) => {
   doc.end();
 });
 
-app.get('/api/audits/:id/excel', optionalAuthMiddleware, async (req, res) => {
+app.get('/api/audits/:id/excel', authMiddleware, adminOrDirector, async (req, res) => {
   let audit = (db.audits || []).find(a => a.id === req.params.id);
   if (!audit && supabaseClient) {
     try {
@@ -1964,20 +2049,26 @@ if (fs.existsSync(DIST_DIR)) {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`OneUP Motors Bulletproof Server v5.0 running on http://0.0.0.0:${PORT}`);
-  
-  // Connect to MongoDB Atlas Cloud Persistence & restore audits/photos immediately upon server boot
-  initCloudDatabase()
-    .then(() => restoreAllCloudMediaToDisk())
-    .catch(e => console.error("Cloud boot notice:", e.message));
-  
-  // Automated Self-Ping Heartbeat Loop (Sends keep-alive signals every 4 minutes to thwart inactivity timeouts)
-  setInterval(() => {
-    try {
-      const externalTarget = process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/api/ping` : "https://oneup-motors-audit.onrender.com/api/ping";
-      fetch(externalTarget).catch(() => {});
-      fetch(`http://127.0.0.1:${PORT}/api/ping`).catch(() => {});
-    } catch (e) {}
-  }, 240000);
-});
+if (!isServerless && require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`OneUP Motors Bulletproof Server v5.0 running on http://0.0.0.0:${PORT}`);
+    
+    // Connect to MongoDB Atlas Cloud Persistence & restore audits/photos immediately upon server boot
+    initCloudDatabase()
+      .then(() => restoreAllCloudMediaToDisk())
+      .catch(e => console.error("Cloud boot notice:", e.message));
+    
+    // Automated Self-Ping Heartbeat Loop: Only run if explicitly enabled to prevent exhausting Render Free Tier 750-hr quota
+    if (process.env.ENABLE_KEEP_ALIVE === 'true') {
+      setInterval(() => {
+        try {
+          const externalTarget = process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/api/ping` : "https://oneup-motors-audit.onrender.com/api/ping";
+          fetch(externalTarget).catch(() => {});
+          fetch(`http://127.0.0.1:${PORT}/api/ping`).catch(() => {});
+        } catch (e) {}
+      }, 240000);
+    }
+  });
+}
+
+module.exports = app;

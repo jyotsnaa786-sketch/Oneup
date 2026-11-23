@@ -11,8 +11,12 @@ export function AuthProvider({ children }) {
     api
       .get("/auth/me")
       .then((res) => setUser(res.data))
-      .catch(() => {
-        if (typeof localStorage !== "undefined") localStorage.removeItem("oneup_token");
+      .catch((err) => {
+        // ONLY invalidate token on 401 Unauthorized or 403 Forbidden.
+        // On network drops or cold-start backend delays, do NOT purge saved credentials!
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          if (typeof localStorage !== "undefined") localStorage.removeItem("oneup_token");
+        }
         setUser(false);
       })
       .finally(() => setLoading(false));
@@ -25,7 +29,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
+    const cleanEmail = (email || "").trim().toLowerCase();
+    const { data } = await api.post("/auth/login", { email: cleanEmail, password });
     if (data.access_token && typeof localStorage !== "undefined") {
       localStorage.setItem("oneup_token", data.access_token);
     }
@@ -34,7 +39,9 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (name, email, password) => {
-    const { data } = await api.post("/auth/register", { name, email, password });
+    const cleanEmail = (email || "").trim().toLowerCase();
+    const cleanName = (name || "").trim();
+    const { data } = await api.post("/auth/register", { name: cleanName, email: cleanEmail, password });
     if (data.access_token && typeof localStorage !== "undefined") {
       localStorage.setItem("oneup_token", data.access_token);
     }
@@ -51,12 +58,15 @@ export function AuthProvider({ children }) {
   };
 
   const requestPasswordReset = async (email) => {
-    const { data } = await api.post("/auth/forgot-password", { email });
+    const cleanEmail = (email || "").trim().toLowerCase();
+    const { data } = await api.post("/auth/forgot-password", { email: cleanEmail });
     return data;
   };
 
   const resetPassword = async (email, code, new_password) => {
-    const { data } = await api.post("/auth/reset-password", { email, code, new_password });
+    const cleanEmail = (email || "").trim().toLowerCase();
+    const cleanCode = (code || "").trim();
+    const { data } = await api.post("/auth/reset-password", { email: cleanEmail, code: cleanCode, new_password });
     if (data.access_token && typeof localStorage !== "undefined") {
       localStorage.setItem("oneup_token", data.access_token);
     }

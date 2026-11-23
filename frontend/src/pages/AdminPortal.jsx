@@ -49,7 +49,7 @@ export default function AdminPortal() {
 
   const handleClearLockouts = async () => {
     try {
-      await api.all("/auth/clear-rate-limit");
+      await api.post("/auth/clear-rate-limit");
       toast.success("All account lockouts and rate limits have been cleared.");
     } catch (err) {
       toast.error("Failed to clear account lockouts");

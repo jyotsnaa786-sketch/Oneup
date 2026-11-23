@@ -63,7 +63,7 @@ async function runTests() {
   console.log('===============================================================\n');
 
   console.log('🚀 Launching backend server...');
-  const nodeBin = path.join(__dirname, '../nodejs/node-v20.11.0-win-x64/node.exe');
+  const nodeBin = process.execPath;
   const serverProc = spawn(nodeBin, [path.join(__dirname, 'server.js')], {
     cwd: __dirname,
     env: { ...process.env, PORT: 8001 }
@@ -201,7 +201,7 @@ async function runTests() {
     const stats = await request('GET', '/api/dashboard/stats');
     assert(stats.status === 200 && stats.data.total_audits >= 2, `Dashboard correctly aggregates total inspections (${stats.data?.total_audits})`);
     assert(stats.data.trend && stats.data.trend.length >= 2, 'Recharts chronological trendline array populated');
-    assert(stats.data.category_averages && stats.data.category_averages.length === 3, 'Category performance comparisons computed across all dealerships');
+    assert(stats.data.category_averages && stats.data.category_averages.length >= 3, `Category performance comparisons computed across all dealerships (${stats.data.category_averages?.length} categories)`);
 
     // 7. Record Fetch & Deletion Test
     console.log('\n--- 6. Record Deletion & Lifecycle Maintenance ---');

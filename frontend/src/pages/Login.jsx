@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { formatApiErrorDetail } from "@/lib/apiClient";
+import { api, formatApiErrorDetail } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { Wrench, ArrowRight, Eye, EyeSlash } from "@phosphor-icons/react";
 
@@ -9,7 +9,7 @@ const HERO =
   "https://images.unsplash.com/photo-1615906655593-ad0386982a0f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwxfHxjYXIlMjBlbmdpbmUlMjBpbnNwZWN0aW9uJTIwbWVjaGFuaWN8ZW58MHx8fHwxNzgyMjM4MDAxfDA&ixlib=rb-4.1.0&q=85";
 
 export default function Login() {
-  const { login, register, requestPasswordReset, resetPassword } = useAuth();
+  const { user, login, register, requestPasswordReset, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState("login"); // "login" | "register" | "forgot"
   const [forgotStep, setForgotStep] = useState(1); // 1: request code, 2: verify & set new pass
@@ -23,32 +23,55 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (user && user.role) {
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
+
+  const handleClearRateLimit = async () => {
+    setBusy(true);
+    try {
+      await api.post("/auth/clear-rate-limit");
+      setError("");
+      toast.success("Lockout cleared. You can now try signing in again.");
+    } catch (err) {
+      toast.error("Failed to clear lockout.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
     setBusy(true);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+    const cleanResetCode = resetCodeInput.trim();
+
     try {
       if (mode === "login") {
-        await login(email, password);
+        await login(cleanEmail, password);
         toast.success("Welcome to OneUP Motors Audit Protocol");
         navigate("/");
       } else if (mode === "register") {
-        await register(name, email, password);
+        await register(cleanName, cleanEmail, password);
         toast.success("Welcome to OneUP Motors Audit Protocol");
         navigate("/");
       } else if (mode === "forgot" && forgotStep === 1) {
-        const res = await requestPasswordReset(email);
+        const res = await requestPasswordReset(cleanEmail);
         setGeneratedCode(res.reset_code || "");
         setResetCodeInput(res.reset_code || "");
         setForgotStep(2);
         toast.success("6-digit verification code generated!");
       } else if (mode === "forgot" && forgotStep === 2) {
-        await resetPassword(email, resetCodeInput, newPassword);
+        await resetPassword(cleanEmail, cleanResetCode, newPassword);
         toast.success("Password reset successfully! Logged in automatically.");
         navigate("/");
       }
     } catch (err) {
-      const msg = formatApiErrorDetail(err.response?.data?.detail) || err.message;
+      const msg = formatApiErrorDetail(err.response?.data?.detail, err) || err.message;
       setError(msg);
       toast.error(msg);
     } finally {
@@ -217,8 +240,17 @@ export default function Login() {
             )}
 
             {error && (
-              <div data-testid="auth-error" className="text-xs text-destructive font-medium border border-destructive/40 bg-destructive/5 px-3 py-2">
-                {error}
+              <div data-testid="auth-error" className="text-xs text-destructive font-medium border border-destructive/40 bg-destructive/5 px-3 py-2 space-y-1">
+                <div>{error}</div>
+                {error.toLowerCase().includes("too many attempts") && (
+                  <button
+                    type="button"
+                    onClick={handleClearRateLimit}
+                    className="text-primary hover:underline font-bold text-xs underline cursor-pointer block mt-1"
+                  >
+                    Click here to unlock account now
+                  </button>
+                )}
               </div>
             )}
 

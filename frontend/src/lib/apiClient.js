@@ -1,22 +1,30 @@
 import axios from "axios";
 
 export const getHostBase = () => {
+  // 1. Explicit environment variable override (if configured)
   if (import.meta.env && import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/$/, "");
   }
   if (typeof window === "undefined") return "http://localhost:8001";
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  const hostname = window.location.hostname;
+
+  // 2. Local development & LAN environments
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+  ) {
     if (window.location.port === "8001") {
       return `${window.location.protocol}//${window.location.host}`;
     }
-    return `http://${window.location.hostname}:8001`;
+    return `http://${hostname}:8001`;
   }
-  // If hosted on Render directly alongside backend:
-  if (window.location.hostname.includes("onrender.com")) {
-    return `${window.location.protocol}//${window.location.host}`;
-  }
-  // Default Render Backend URL for Vercel / External Frontend hosting:
-  return "https://oneup-motors-audit.onrender.com";
+
+  // 3. Unified Hosting on Vercel, Render, or Custom Domain
+  // Calls its own origin directly (same-domain API routing, zero CORS issues)
+  return `${window.location.protocol}//${window.location.host}`;
 };
 
 export const API = `${getHostBase()}/api`;
@@ -37,7 +45,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export function formatApiErrorDetail(detail) {
+export function formatApiErrorDetail(detail, error) {
+  if (error && (error.code === "ERR_NETWORK" || error.message?.includes("Network Error") || !error.response)) {
+    return "Cannot connect to backend server. The backend service may be offline or suspended.";
+  }
+  if (error?.response?.status === 503) {
+    return "Backend server is suspended or unavailable (HTTP 503). Please unsuspend or check your Render backend service.";
+  }
   if (detail == null) return "Something went wrong. Please try again.";
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail))
